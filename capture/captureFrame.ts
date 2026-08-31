@@ -406,6 +406,22 @@ export function snapshotOnPaint(
 }
 
 /**
+ * Copy the 1× crop into an ImageBitmap on the first microtask after paint.
+ * Avoids CPU `getImageData` during GIF recording. Close the bitmap after encode.
+ */
+export function grabOnPaint(
+  api: SandkitApi,
+  bounds: CellBounds,
+  onPaint?: () => void,
+  look?: CaptureLook,
+): Promise<ImageBitmap | null> {
+  return rasterizeOnPaint(api, bounds, 1, onPaint, look).then((canvas) => {
+    if (!canvas) return null;
+    return createImageBitmap(canvas);
+  });
+}
+
+/**
  * Crop the selection from the live game canvases, then nearest-neighbor upscale.
  * Layers (bottom to top): WebGL world, dynamic2D tool FX, overlayCanvas (wires, hover UI).
  */
