@@ -8,9 +8,18 @@ export function isOverlayPanelOpen(): boolean {
   return live?.open === true;
 }
 
-/** Skip post-capture compositing when overlay is already painted on overlayCanvas. */
+let previewOverlayPaint = true;
+
+/** Hide the live overlay on overlayCanvas for one paint so capture can composite after upscale. */
+export function setCapturePreviewOverlayPaint(enabled: boolean): void {
+  previewOverlayPaint = enabled;
+}
+
+export function isCapturePreviewOverlayPaintEnabled(): boolean {
+  return previewOverlayPaint;
+}
+
+/** Composite overlay after capture (and after upscale). Live preview is suppressed during paint. */
 export function shouldCompositeOverlayAfterCapture(overlay: CaptureOverlaySettings): boolean {
-  if (!overlay.enabled) return false;
-  if (overlay.advanced) return true;
-  return !isOverlayPanelOpen();
+  return overlay.enabled;
 }

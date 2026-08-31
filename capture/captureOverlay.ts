@@ -446,6 +446,7 @@ function readImageFromSvg(svg: string, width: number, height: number): Promise<I
           resolve(null);
           return;
         }
+        ctx.imageSmoothingEnabled = false;
         ctx.drawImage(img, 0, 0, width, height);
         try {
           resolve(ctx.getImageData(0, 0, width, height));
@@ -468,15 +469,19 @@ export async function rasterizeForeignHtml(
   rootHtml: string,
   width: number,
   height: number,
+  outputWidth = width,
+  outputHeight = height,
 ): Promise<ImageData | null> {
   if (width <= 0 || height <= 0 || !rootHtml.trim()) return null;
+  const outW = Math.max(1, Math.round(outputWidth));
+  const outH = Math.max(1, Math.round(outputHeight));
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-  <foreignObject width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" width="${outW}" height="${outH}" viewBox="0 0 ${width} ${height}">
+  <foreignObject width="${width}" height="${height}">
     ${rootHtml}
   </foreignObject>
 </svg>`;
-  return readImageFromSvg(svg, width, height);
+  return readImageFromSvg(svg, outW, outH);
 }
 
 /** Advanced overlay via SVG foreignObject; pixels are read on an isolated canvas. */
@@ -485,8 +490,25 @@ async function rasterizeAdvancedOverlay(
   width: number,
   height: number,
 ): Promise<ImageData | null> {
-  if (width <= 0 || height <= 0 || !innerHtml.trim()) return null;
-  return rasterizeForeignHtml(wrapOverlayFrame(innerHtml, width, height), width, height);
+  return rasterizeAdvancedOverlaySized(innerHtml, width, height);
+}
+
+/** Advanced overlay raster with optional nearest-neighbor upscale via SVG viewBox. */
+export async function rasterizeAdvancedOverlaySized(
+  innerHtml: string,
+  cropWidth: number,
+  cropHeight: number,
+  outputWidth = cropWidth,
+  outputHeight = cropHeight,
+): Promise<ImageData | null> {
+  if (cropWidth <= 0 || cropHeight <= 0 || !innerHtml.trim()) return null;
+  return rasterizeForeignHtml(
+    wrapOverlayFrame(innerHtml, cropWidth, cropHeight),
+    cropWidth,
+    cropHeight,
+    outputWidth,
+    outputHeight,
+  );
 }
 
 async function rasterizeOverlayImageData(

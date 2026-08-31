@@ -9,6 +9,7 @@ import {
 } from "./advancedOverlayDomPreview";
 import { drawSimpleOverlayInScreenRect } from "./captureOverlay";
 import type { CaptureOverlaySettings } from "./captureSettings";
+import { isCapturePreviewOverlayPaintEnabled } from "./overlayPanelOpen.ts";
 import {
   cellBoundsEqual,
   getSelectionCellBounds,
@@ -102,7 +103,12 @@ export function installCaptureAreaPreview(readState: () => CapturePreviewState):
         strokeBounds(ctx, api, liveBounds, PREVIEW_OUTLINE_IDLE, PREVIEW_OUTLINE_WIDTH);
       }
 
-      if (previewRect && overlay?.enabled && !overlay.advanced) {
+      if (
+        isCapturePreviewOverlayPaintEnabled() &&
+        previewRect &&
+        overlay?.enabled &&
+        !overlay.advanced
+      ) {
         drawSimpleOverlayInScreenRect(ctx, overlay, previewRect);
       }
 

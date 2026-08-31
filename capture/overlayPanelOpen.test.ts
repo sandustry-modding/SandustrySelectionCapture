@@ -19,17 +19,21 @@ test("isOverlayPanelOpen reads the live overlay panel flag", () => {
   assert.equal(isOverlayPanelOpen(), false);
 });
 
-test("shouldCompositeOverlayAfterCapture skips simple overlay while panel is open", () => {
+test("shouldCompositeOverlayAfterCapture composites simple overlay after capture", () => {
   const root = globalThis as unknown as Record<string, { open?: boolean } | undefined>;
   root[KEY] = { open: true };
   assert.equal(
     shouldCompositeOverlayAfterCapture(overlaySettings({ enabled: true, advanced: false })),
-    false,
+    true,
   );
   root[KEY] = { open: false };
   assert.equal(
     shouldCompositeOverlayAfterCapture(overlaySettings({ enabled: true, advanced: false })),
     true,
+  );
+  assert.equal(
+    shouldCompositeOverlayAfterCapture(overlaySettings({ enabled: false, advanced: false })),
+    false,
   );
   delete root[KEY];
 });

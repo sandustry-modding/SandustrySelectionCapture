@@ -1,3 +1,4 @@
+import { setCapturePreviewOverlayPaint } from "./overlayPanelOpen.ts";
 import type { CellBounds } from "./selectionBounds";
 
 /** Sky fill when the WebGL backdrop cannot be sampled. */
@@ -367,25 +368,30 @@ export function rasterizeOnPaint(
   return new Promise((resolve, reject) => {
     let settled = false;
     let timeoutId = 0;
+    setCapturePreviewOverlayPaint(false);
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      setCapturePreviewOverlayPaint(true);
+      fn();
+    };
     const unsubscribe = api.events.on("frame:render", () => {
       unsubscribe();
       onPaint?.();
       queueMicrotask(() => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        try {
-          resolve(rasterizeSelection(api, bounds, scale, look));
-        } catch (error) {
-          reject(error);
-        }
+        finish(() => {
+          try {
+            resolve(rasterizeSelection(api, bounds, scale, look));
+          } catch (error) {
+            reject(error);
+          }
+        });
       });
     });
     timeoutId = window.setTimeout(() => {
-      if (settled) return;
-      settled = true;
       unsubscribe();
-      reject(new Error("paint wait timed out"));
+      finish(() => reject(new Error("paint wait timed out")));
     }, 2000);
   });
 }

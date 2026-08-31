@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+## 0.7.0
+
+- Fixed: PNG screenshot overlay was tiny in the top-left when PNG upscale was above 1× — overlay now rasterizes at crop layout and scales to the output canvas.
+- Fixed: overlay SVG rasterization uses nearest-neighbor scaling for sharper captions on upscaled captures.
+- Fixed: PNG capture syncs advanced overlay DOM when the F7 panel is closed, and skips double-painting simple overlay on the game overlay canvas.
+- Fixed: GIF overlay HTML is rasterized at the final GIF upscale (crop layout scaled via SVG viewBox), not at 1× crop pixels.
+
+## 0.6.1
+
+- Fixed: GIF overlay CSS advances on the sim timeline (`frame × ticks/frame × 20 ms`) instead of wall clock during capture.
+- Fixed: simulation pauses after tick steps and during overlay compositing so sand does not drift between frames.
+- Fixed: overlay font embedding is cached so GIF capture no longer re-fetches fonts every frame.
+
 ## 0.6.0
 
 - Added: live **advanced** overlay preview in the capture box — CSS animations run while the panel is open.

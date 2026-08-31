@@ -8,7 +8,9 @@ import {
 } from "./encodeGifLimit";
 import { applyCaptureLook, getSession, snapshotOnPaint, type CaptureLook } from "./captureFrame";
 import type { CaptureOverlaySettings } from "./captureSettings";
-import { applyNativeCaptureOverlay } from "./overlayApply";
+import { applyNativeCaptureOverlay, scaleImageDataNearestNeighbor, withOverlayGifRecording } from "./overlayApply";
+import { setOverlayRecordingFrame } from "./advancedOverlayDomPreview";
+import { SIM_MS_PER_TICK } from "./overlayRecording";
 import { gifSizeLimitBytes, type GifSizeLimit } from "./captureSettings";
 import { DEFAULT_CAPTURE_SCALE, readCaptureScale } from "./modScale";
 import { clearMarqueeSelection, type CellBounds } from "./selectionBounds";
@@ -110,7 +112,8 @@ function waitTicks(api: SandkitApi, count: number, signal: AbortSignal | undefin
       if (left <= 0) {
         clearTimeout(timeoutId);
         signal?.removeEventListener("abort", onAbort);
-        // Stay unpaused so this tick can paint before we capture.
+        // Pause before overlay compositing so the sim does not advance off the timeline.
+        setSimulationPaused(true);
         resolve();
         return;
       }
@@ -257,7 +260,7 @@ export async function recordSelectionGif(
 ): Promise<RecordGifResult> {
   const framesWanted = clampMinInt(options.frames, MIN_FRAMES);
   const ticksPerFrame = clampInt(options.ticksPerFrame, MIN_TICKS, MAX_TICKS);
-  const delayMs = Math.max(20, ticksPerFrame * 20);
+  const delayMs = Math.max(SIM_MS_PER_TICK, ticksPerFrame * SIM_MS_PER_TICK);
   const look: CaptureLook = {
     greenscreen: options.greenscreen,
     showMouse: options.showMouse,
@@ -284,39 +287,77 @@ export async function recordSelectionGif(
   });
 
   const overlay = options.overlay;
+  const overlayEnabled = overlay?.enabled === true;
+  const overlayCache = overlayEnabled ? new Map<string, ImageData>() : undefined;
   const frames: ImageData[] = [];
   const restoreLook = applyCaptureLook(look);
+  let captureResult: RecordGifResult | null = null;
   try {
     try {
-      const first = await captureGifFrame(api, bounds, look);
-      throwIfAborted(options.signal);
-      if (!first) return "out-of-view";
-      frames.push(overlay?.enabled ? await applyNativeCaptureOverlay(first, overlay) : first);
+      captureResult = await withOverlayGifRecording(ticksPerFrame, overlay, async () => {
+        for (let i = 0; i < framesWanted; i++) {
+          if (i > 0) {
+            await waitTicks(api, ticksPerFrame, options.signal);
+            throwIfAborted(options.signal);
+          }
 
-      for (let i = 1; i < framesWanted; i++) {
-        await waitTicks(api, ticksPerFrame, options.signal);
-        throwIfAborted(options.signal);
-        const frame = await captureGifFrame(api, bounds, look);
-        throwIfAborted(options.signal);
-        if (!frame) {
-          console.warn(`frame ${i + 1} missing — abort`);
-          return "failed";
+          if (overlay?.advanced) setOverlayRecordingFrame(i);
+
+          const cropFrame = await captureGifFrame(api, bounds, look);
+          throwIfAborted(options.signal);
+          if (!cropFrame) {
+            if (i === 0) return "out-of-view";
+            console.warn(`frame ${i + 1} missing — abort`);
+            return "failed";
+          }
+
+          const cropWidth = cropFrame.width;
+          const cropHeight = cropFrame.height;
+          const outWidth = cropWidth * scale;
+          const outHeight = cropHeight * scale;
+
+          let frame =
+            scale > 1
+              ? scaleImageDataNearestNeighbor(cropFrame, outWidth, outHeight)
+              : cropFrame;
+
+          if (overlayEnabled) {
+            frame = await applyNativeCaptureOverlay(frame, overlay!, {
+              frameIndex: i,
+              ticksPerFrame,
+              cache: overlayCache,
+              cropWidth,
+              cropHeight,
+            });
+          }
+
+          frames.push(frame);
+
+          if (i === 0 || i % 10 === 0) {
+            console.log(`captured frame ${i + 1}/${framesWanted}`);
+          }
         }
-        frames.push(overlay?.enabled ? await applyNativeCaptureOverlay(frame, overlay) : frame);
-        if (i === 1 || i % 10 === 0) {
-          console.log(`captured frame ${i + 1}/${framesWanted}`);
-        }
-      }
+        return null;
+      });
     } finally {
       restoreLook();
       setSimulationPaused(wasPaused);
     }
 
+    if (captureResult) return captureResult;
+    if (frames.length === 0) return "out-of-view";
+
     if (frames.length < 2) return "failed";
 
     options.onEncodeStart?.();
     api.ui.toast("Encoding GIF…", {});
-    const encoded = await encodeGif(frames, delayMs, maxBytes, options.signal, scale);
+    const encoded = await encodeGif(
+      frames,
+      delayMs,
+      maxBytes,
+      options.signal,
+      scale > 1 ? 1 : scale,
+    );
     if (encoded === "too-large") return "too-large";
     if (!encoded) return "failed";
 

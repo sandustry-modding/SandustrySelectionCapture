@@ -1,8 +1,16 @@
-import { applyCaptureLook, rasterizeOnPaint, type CaptureLook } from "./captureFrame";
+import { applyCaptureLook, getSelectionScreenRect, rasterizeOnPaint, type CaptureLook } from "./captureFrame";
+import {
+  hideAdvancedOverlayDomPreview,
+  syncAdvancedOverlayDomPreview,
+} from "./advancedOverlayDomPreview";
 import { applyNativeCaptureOverlayToCanvas, nearestNeighborScaleCanvas } from "./overlayApply";
 import type { CaptureOverlaySettings } from "./captureSettings";
 import { captureDownloadFilename, downloadBlob } from "./downloadAsset";
 import { DEFAULT_CAPTURE_SCALE, readCaptureScale } from "./modScale";
+import {
+  isOverlayPanelOpen,
+  setCapturePreviewOverlayPaint,
+} from "./overlayPanelOpen";
 import {
   resolveCaptureBounds,
   type CellBounds,
@@ -16,7 +24,7 @@ export type CapturePngOptions = SelectionBoundsOptions & {
   download?: boolean;
   /** Post-capture nearest-neighbor upscale. Default 1. */
   scale?: number;
-  /** Optional caption overlay composited after capture. */
+  /** Optional caption overlay composited after upscale. */
   overlay?: CaptureOverlaySettings;
 };
 
@@ -61,9 +69,22 @@ export async function captureSelectionPng(
   }
 
   const scale = readCaptureScale(options.scale ?? DEFAULT_CAPTURE_SCALE);
+  const overlay = options.overlay;
+  const overlayEnabled = overlay?.enabled === true;
+  const panelOpen = isOverlayPanelOpen();
+  let syncedOverlayDom = false;
+
+  if (overlayEnabled && overlay.advanced) {
+    const screenRect = getSelectionScreenRect(api, bounds);
+    if (screenRect && !panelOpen) {
+      syncAdvancedOverlayDomPreview(overlay, screenRect);
+      syncedOverlayDom = true;
+    }
+  }
 
   const restoreLook = applyCaptureLook(look);
   let raster: HTMLCanvasElement | null = null;
+  setCapturePreviewOverlayPaint(false);
   try {
     raster = await rasterizeOnPaint(api, bounds, 1, undefined, look);
   } catch (error) {
@@ -71,6 +92,7 @@ export async function captureSelectionPng(
     return "failed";
   } finally {
     restoreLook();
+    setCapturePreviewOverlayPaint(true);
   }
   if (!raster) return "out-of-view";
 
@@ -82,11 +104,23 @@ export async function captureSelectionPng(
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(raster, 0, 0);
 
-  if (options.overlay?.enabled) {
-    await applyNativeCaptureOverlayToCanvas(copy, options.overlay);
-  }
+  const cropWidth = copy.width;
+  const cropHeight = copy.height;
+  let output: HTMLCanvasElement = copy;
 
-  const output = nearestNeighborScaleCanvas(copy, scale);
+  try {
+    if (overlayEnabled) {
+      if (scale > 1) output = nearestNeighborScaleCanvas(copy, scale);
+      await applyNativeCaptureOverlayToCanvas(output, overlay, {
+        cropWidth,
+        cropHeight,
+      });
+    } else if (scale > 1) {
+      output = nearestNeighborScaleCanvas(copy, scale);
+    }
+  } finally {
+    if (syncedOverlayDom) hideAdvancedOverlayDomPreview();
+  }
 
   if (options.download) {
     const blob = await canvasToPngBlob(output);

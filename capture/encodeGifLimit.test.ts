@@ -4,6 +4,7 @@ import type { UnencodedFrame } from "modern-gif";
 import {
   GIF_1MB,
   GIF_2MB,
+  GIF_5MB,
   GIF_MIN_FRAMES,
   encodePreparedGifWithLimit,
   encodeRgbaFrames,
@@ -37,6 +38,7 @@ function frames(count: number): UnencodedFrame[] {
 test("GIF_1MB is 1 MiB and GIF_2MB is 2 MiB", () => {
   assert.equal(GIF_1MB, 1024 * 1024);
   assert.equal(GIF_2MB, 2 * 1024 * 1024);
+  assert.equal(GIF_5MB, 5 * 1024 * 1024);
 });
 
 test("encode without a cap writes a GIF89a file", async () => {

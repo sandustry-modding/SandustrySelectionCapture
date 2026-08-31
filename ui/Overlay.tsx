@@ -13,10 +13,7 @@ import {
 } from "@modkit/ui";
 import { captureSelectionPng } from "../capture/capturePng";
 import { hideAdvancedOverlayDomPreview } from "../capture/advancedOverlayDomPreview";
-import {
-  installCaptureAreaPreview,
-  type CapturePreviewState,
-} from "../capture/capturePreview";
+import { installCaptureAreaPreview, type CapturePreviewState } from "../capture/capturePreview";
 import { FloatingWindow } from "./FloatingWindow";
 import {
   GIF_SIZE_LIMIT_OPTIONS,
@@ -37,6 +34,7 @@ import { waitCountdownSeconds } from "../capture/countdown";
 import { modinfo } from "../modinfo";
 import { DEFAULT_ADVANCED_OVERLAY_HTML } from "../capture/captureOverlay";
 import { recordSelectionGif } from "../capture/recordGif";
+import { gifBoundsTooLargeFor60Fps } from "../capture/gifCaptureSize";
 import {
   clampBlockPadding,
   getSelectionCellBounds,
@@ -212,13 +210,17 @@ export function Overlay() {
     const abort = new AbortController();
     live.abortRecord = abort;
     const api = sandkit.api;
-    const gifBounds = resolveCaptureBounds(api, lockedGifBounds, { blockPadding });
-    if (!gifBounds) {
+    const rawBounds = resolveCaptureBounds(api, lockedGifBounds, { blockPadding });
+    if (!rawBounds) {
       live.abortRecord = null;
       api.ui.toast("Lock capture area or press C, drag, then Record", {});
       return;
     }
-    setFrozenBounds(gifBounds);
+    const gifScale = modGifScale(api);
+    if (gifBoundsTooLargeFor60Fps(api, rawBounds, gifScale)) {
+      api.ui.toast("This selection is too large for 60 fps", {});
+    }
+    setFrozenBounds(rawBounds);
     setPhase("countdown");
     void (async () => {
       try {
@@ -241,11 +243,10 @@ export function Overlay() {
           showMouse,
           gifSizeLimit,
           blockPadding,
-          bounds: gifBounds,
-          scale: modGifScale(api),
+          bounds: rawBounds,
+          scale: gifScale,
           signal: abort.signal,
           overlay,
-          onEncodeStart: () => setPhase("encoding"),
         });
         const sizeLabel = gifSizeLimitLabel(gifSizeLimit);
         switch (result) {
@@ -298,8 +299,7 @@ export function Overlay() {
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, []);
 
-  const outline =
-    phase === "encoding" ? "encoding" : phase === "recording" ? "recording" : "idle";
+  const outline = phase === "encoding" ? "encoding" : phase === "recording" ? "recording" : "idle";
   const previewStateRef = useRef<CapturePreviewState>({
     blockPadding,
     outline,
@@ -334,7 +334,11 @@ export function Overlay() {
       return;
     }
     patchSettings({ lockedGifBounds: bounds });
-    api.ui.toast("Capture area locked", {});
+    if (gifBoundsTooLargeFor60Fps(api, bounds, modGifScale(api))) {
+      api.ui.toast("Capture area locked — too large for 60 fps", {});
+    } else {
+      api.ui.toast("Capture area locked", {});
+    }
   }
 
   function clearLockedGifArea() {
@@ -411,7 +415,7 @@ export function Overlay() {
                 onChange={(checked) => patchSettings({ showMouse: checked })}
               />
             </OptionsRow>
-            <OptionsRow label="GIF size limit" description="Can take some time to encode.">
+            <OptionsRow label="GIF size limit" description="Recording stops at this size.">
               <OptionsSelect
                 value={gifSizeLimit}
                 options={GIF_SIZE_LIMIT_OPTIONS}
@@ -426,9 +430,7 @@ export function Overlay() {
               <OptionsSwitch
                 checked={overlay.enabled}
                 disabled={busy}
-                onChange={(checked) =>
-                  patchSettings({ overlay: { ...overlay, enabled: checked } })
-                }
+                onChange={(checked) => patchSettings({ overlay: { ...overlay, enabled: checked } })}
               />
             </OptionsRow>
             {overlay.enabled ? (

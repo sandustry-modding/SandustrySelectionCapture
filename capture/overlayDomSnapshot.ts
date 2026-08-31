@@ -337,6 +337,26 @@ function quoteCssFamily(name: string): string {
   return JSON.stringify(name);
 }
 
+const embeddedFontCssCache = new Map<string, string>();
+let overlayFontsReady = false;
+
+/**
+ * Cached @font-face CSS for overlay rasterization (fonts are fetched once per family set).
+ */
+export async function getEmbeddedFontFaceCss(families: Iterable<string>): Promise<string> {
+  const wanted = [...families]
+    .map((name) => name.trim().toLowerCase())
+    .filter((name) => name && !isGenericFontFamily(name))
+    .sort();
+  if (wanted.length === 0) return "";
+  const key = wanted.join("|");
+  const cached = embeddedFontCssCache.get(key);
+  if (cached !== undefined) return cached;
+  const css = await buildEmbeddedFontFaceCss(wanted);
+  embeddedFontCssCache.set(key, css);
+  return css;
+}
+
 /**
  * Build @font-face CSS with data-URI sources for families used by the live overlay.
  * SVG-as-image cannot load the page's file:// / http fonts.
@@ -383,9 +403,12 @@ export async function buildEmbeddedFontFaceCss(families: Iterable<string>): Prom
 
 /** Clone a live overlay root with current computed styles (including CSS animations). */
 export async function snapshotOverlayRootHtml(root: HTMLElement): Promise<string | null> {
-  await document.fonts.ready;
+  if (!overlayFontsReady) {
+    await document.fonts.ready;
+    overlayFontsReady = true;
+  }
   const families = collectFontFamiliesFromTree(root);
-  const fontCss = await buildEmbeddedFontFaceCss(families);
+  const fontCss = await getEmbeddedFontFaceCss(families);
 
   const clone = root.cloneNode(true);
   if (!(clone instanceof HTMLElement)) return null;

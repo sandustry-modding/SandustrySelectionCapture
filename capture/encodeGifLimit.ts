@@ -6,6 +6,9 @@ export const GIF_1MB = 1024 * 1024;
 /** Optional larger GIF size cap (2 MiB). */
 export const GIF_2MB = 2 * 1024 * 1024;
 
+/** Default / overall GIF size cap (5 MiB). */
+export const GIF_5MB = 5 * 1024 * 1024;
+
 /** GIF encode needs at least this many frames. */
 export const GIF_MIN_FRAMES = 2;
 

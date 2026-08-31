@@ -11,7 +11,7 @@ import {
   type CaptureSettings,
 } from "./captureSettings.ts";
 import type { CellBounds } from "./selectionBounds.ts";
-import { GIF_1MB, GIF_2MB } from "./encodeGifLimit.ts";
+import { GIF_1MB, GIF_2MB, GIF_5MB } from "./encodeGifLimit.ts";
 
 const STORAGE_KEY = "irishbruse.selection-capture.settings";
 
@@ -53,7 +53,7 @@ test("normalizeCaptureSettings clamps invalid values", () => {
       blockPadding: -5,
       greenscreen: true,
       showMouse: false,
-      gifSizeLimit: "none",
+      gifSizeLimit: "5mb",
       lockedGifBounds: null,
       overlay: {
         enabled: false,
@@ -86,13 +86,17 @@ test("normalizeCaptureSettings maps legacy limit1Mb true to 1mb", () => {
   );
 });
 
+test("normalizeCaptureSettings maps legacy none to 5mb", () => {
+  assert.equal(normalizeCaptureSettings({ gifSizeLimit: "none" }).gifSizeLimit, "5mb");
+});
+
 test("gifSizeLimitBytes and gifSizeLimitLabel cover each option", () => {
-  assert.equal(gifSizeLimitBytes("none"), undefined);
   assert.equal(gifSizeLimitBytes("1mb"), GIF_1MB);
   assert.equal(gifSizeLimitBytes("2mb"), GIF_2MB);
-  assert.equal(gifSizeLimitLabel("none"), "No limit");
+  assert.equal(gifSizeLimitBytes("5mb"), GIF_5MB);
   assert.equal(gifSizeLimitLabel("1mb"), "1 MB");
   assert.equal(gifSizeLimitLabel("2mb"), "2 MB");
+  assert.equal(gifSizeLimitLabel("5mb"), "5 MB");
 });
 
 test("normalizeCaptureOverlay clamps vertical align and fills defaults", () => {
