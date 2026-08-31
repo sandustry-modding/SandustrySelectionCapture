@@ -1,24 +1,7 @@
 import { rasterizeLiveAdvancedOverlay } from "./advancedOverlayDomPreview";
-import { applyOverlayToImageData, getOverlayImageData } from "./captureOverlay";
+import { applyOverlayToImageData } from "./captureOverlay";
 import type { CaptureOverlaySettings } from "./captureSettings";
 import { shouldCompositeOverlayAfterCapture } from "./overlayPanelOpen";
-
-/** Rasterize the GIF overlay once (still freeze). Null when the crop already has it. */
-export async function prepareGifOverlayRaster(
-  width: number,
-  height: number,
-  overlay: CaptureOverlaySettings | undefined,
-): Promise<ImageData | null> {
-  if (!overlay?.enabled) return null;
-  const cache = new Map<string, ImageData>();
-  if (overlay.advanced) {
-    const live = await rasterizeLiveAdvancedOverlay(width, height);
-    if (live && live.width === width && live.height === height) return live;
-    return getOverlayImageData(overlay, width, height, cache);
-  }
-  if (!shouldCompositeOverlayAfterCapture(overlay)) return null;
-  return getOverlayImageData(overlay, width, height, cache);
-}
 
 /** Composite overlay at 1× crop size (live CSS snapshot for advanced). */
 export async function applyNativeCaptureOverlay(

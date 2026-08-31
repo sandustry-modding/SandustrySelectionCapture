@@ -6,10 +6,9 @@ import {
   isAbortError,
   throwIfAborted,
 } from "./encodeGifLimit";
-import { applyCaptureLook, getSession, grabOnPaint, type CaptureLook } from "./captureFrame";
+import { applyCaptureLook, getSession, snapshotOnPaint, type CaptureLook } from "./captureFrame";
 import type { CaptureOverlaySettings } from "./captureSettings";
-import { blendSourceOverImageData } from "./captureOverlay";
-import { prepareGifOverlayRaster } from "./overlayApply";
+import { applyNativeCaptureOverlay } from "./overlayApply";
 import { gifSizeLimitBytes, type GifSizeLimit } from "./captureSettings";
 import { DEFAULT_CAPTURE_SCALE, readCaptureScale } from "./modScale";
 import { clearMarqueeSelection, type CellBounds } from "./selectionBounds";
@@ -41,7 +40,7 @@ export type RecordGifOptions = {
   signal?: AbortSignal;
   /** Called after capture, before encode. */
   onEncodeStart?: () => void;
-  /** Optional caption overlay composited once at encode (1× crop, then upscale). */
+  /** Optional caption overlay composited on each frame after upscale. */
   overlay?: CaptureOverlaySettings;
 };
 
@@ -111,7 +110,7 @@ function waitTicks(api: SandkitApi, count: number, signal: AbortSignal | undefin
       if (left <= 0) {
         clearTimeout(timeoutId);
         signal?.removeEventListener("abort", onAbort);
-        setSimulationPaused(true);
+        // Stay unpaused so this tick can paint before we capture.
         resolve();
         return;
       }
@@ -127,12 +126,14 @@ async function captureGifFrame(
   api: SandkitApi,
   bounds: CellBounds,
   look: CaptureLook,
-): Promise<ImageBitmap | null> {
-  const snap = () => grabOnPaint(api, bounds, () => setSimulationPaused(true), look);
+): Promise<ImageData | null> {
+  if (getSession()?.paused === true) setSimulationPaused(false);
+  const snap = () => snapshotOnPaint(api, bounds, () => setSimulationPaused(true), look);
   try {
     return await snap();
   } catch (error) {
     console.warn(`paint wait failed, retry:`, error);
+    setSimulationPaused(false);
     try {
       return await snap();
     } catch (retryError) {
@@ -168,27 +169,16 @@ function gifScratch(slot: "src" | "scaled", width: number, height: number): HTML
   return canvas;
 }
 
-function bitmapToRgba(
-  frame: ImageBitmap,
+function frameToRgba(
+  frame: ImageData,
   scale: number,
-  overlay: ImageData | null,
 ): { data: Uint8ClampedArray; width: number; height: number } | null {
   const src = gifScratch("src", frame.width, frame.height);
   const srcCtx = src.getContext("2d", { willReadFrequently: true });
   if (!srcCtx) return null;
-  srcCtx.imageSmoothingEnabled = false;
-  srcCtx.clearRect(0, 0, src.width, src.height);
-  srcCtx.drawImage(frame, 0, 0);
-
-  if (overlay) {
-    const base = srcCtx.getImageData(0, 0, src.width, src.height);
-    const blended = blendSourceOverImageData(base, overlay);
-    srcCtx.putImageData(blended, 0, 0);
-  }
+  srcCtx.putImageData(frame, 0, 0);
 
   const pixelScale = readCaptureScale(scale);
-  if (pixelScale === 1) return canvasToRgba(src);
-
   const scaled = gifScratch("scaled", frame.width * pixelScale, frame.height * pixelScale);
   const scaledCtx = scaled.getContext("2d", { willReadFrequently: true });
   if (!scaledCtx) return null;
@@ -219,56 +209,34 @@ function gifEncodeWorkerUrl(): string | undefined {
   }
 }
 
-function closeBitmaps(frames: ImageBitmap[]): void {
-  for (const frame of frames) {
-    try {
-      frame.close();
-    } catch {
-      /* already closed */
-    }
-  }
-  frames.length = 0;
-}
-
 async function encodeGif(
-  frames: ImageBitmap[],
+  frames: ImageData[],
   delayMs: number,
   maxBytes: number | undefined,
   signal: AbortSignal | undefined,
   scale: number,
-  overlay: CaptureOverlaySettings | undefined,
 ) {
   if (frames.length === 0) return null;
-
-  let overlayRaster: ImageData | null = null;
-  try {
-    overlayRaster = await prepareGifOverlayRaster(frames[0].width, frames[0].height, overlay);
-  } catch (error) {
-    console.warn(`GIF overlay snapshot failed:`, error);
-  }
 
   const prepared: UnencodedFrame[] = [];
   let width = 0;
   let height = 0;
-  try {
-    for (let i = 0; i < frames.length; i++) {
-      throwIfAborted(signal);
-      const rgba = bitmapToRgba(frames[i], scale, overlayRaster);
-      frames[i].close();
-      if (!rgba) return null;
-      width = rgba.width;
-      height = rgba.height;
-      const data = new Uint8ClampedArray(rgba.data) as UnencodedFrame["data"];
-      prepared.push({
-        data,
-        delay: delayMs,
-        disposal: 1,
-      });
-      await yieldToRenderer();
-    }
-  } finally {
-    closeBitmaps(frames);
+  for (let i = 0; i < frames.length; i++) {
+    throwIfAborted(signal);
+    const rgba = frameToRgba(frames[i], scale);
+    if (!rgba) return null;
+    width = rgba.width;
+    height = rgba.height;
+    // Scratch canvases reuse the same backing store — copy before the next frame.
+    const data = new Uint8ClampedArray(rgba.data) as UnencodedFrame["data"];
+    prepared.push({
+      data,
+      delay: delayMs,
+      disposal: 1,
+    });
+    await yieldToRenderer();
   }
+  frames.length = 0;
 
   return encodePreparedGifWithLimit(
     prepared,
@@ -315,17 +283,16 @@ export async function recordSelectionGif(
     gifSizeLimit: options.gifSizeLimit,
   });
 
-  const frames: ImageBitmap[] = [];
+  const overlay = options.overlay;
+  const frames: ImageData[] = [];
   const restoreLook = applyCaptureLook(look);
-  setSimulationPaused(true);
-  let captureResult: RecordGifResult | undefined;
   try {
-    const first = await captureGifFrame(api, bounds, look);
-    throwIfAborted(options.signal);
-    if (!first) {
-      captureResult = "out-of-view";
-    } else {
-      frames.push(first);
+    try {
+      const first = await captureGifFrame(api, bounds, look);
+      throwIfAborted(options.signal);
+      if (!first) return "out-of-view";
+      frames.push(overlay?.enabled ? await applyNativeCaptureOverlay(first, overlay) : first);
+
       for (let i = 1; i < framesWanted; i++) {
         await waitTicks(api, ticksPerFrame, options.signal);
         throwIfAborted(options.signal);
@@ -333,41 +300,23 @@ export async function recordSelectionGif(
         throwIfAborted(options.signal);
         if (!frame) {
           console.warn(`frame ${i + 1} missing — abort`);
-          captureResult = "failed";
-          break;
+          return "failed";
         }
-        frames.push(frame);
+        frames.push(overlay?.enabled ? await applyNativeCaptureOverlay(frame, overlay) : frame);
         if (i === 1 || i % 10 === 0) {
           console.log(`captured frame ${i + 1}/${framesWanted}`);
         }
       }
+    } finally {
+      restoreLook();
+      setSimulationPaused(wasPaused);
     }
-  } catch (error) {
-    closeBitmaps(frames);
-    if (isAbortError(error)) return "cancelled";
-    console.error(`record threw:`, error);
-    return "failed";
-  } finally {
-    restoreLook();
-    setSimulationPaused(wasPaused);
-  }
 
-  if (captureResult || frames.length < 2) {
-    closeBitmaps(frames);
-    return captureResult ?? "failed";
-  }
+    if (frames.length < 2) return "failed";
 
-  try {
     options.onEncodeStart?.();
     api.ui.toast("Encoding GIF…", {});
-    const encoded = await encodeGif(
-      frames,
-      delayMs,
-      maxBytes,
-      options.signal,
-      scale,
-      options.overlay,
-    );
+    const encoded = await encodeGif(frames, delayMs, maxBytes, options.signal, scale);
     if (encoded === "too-large") return "too-large";
     if (!encoded) return "failed";
 
@@ -379,7 +328,6 @@ export async function recordSelectionGif(
     });
     return encoded.hitLimit ? "ok-capped" : "ok";
   } catch (error) {
-    closeBitmaps(frames);
     if (isAbortError(error)) return "cancelled";
     console.error(`record threw:`, error);
     return "failed";

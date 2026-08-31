@@ -1,10 +1,5 @@
 # Changelog
 
-## 0.6.1
-
-- Changed: Record GIF grabs each frame as an ImageBitmap and composites the overlay once during encode, so large crops stay closer to sim tick rate.
-- Fixed: large GIF recordings could skip or jump cell motion — the sim stays paused except for the ticks between frames.
-
 ## 0.6.0
 
 - Added: live **advanced** overlay preview in the capture box — CSS animations run while the panel is open.
