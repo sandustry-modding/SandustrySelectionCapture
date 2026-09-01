@@ -13,8 +13,6 @@ function clampBlockPadding(value: number): number {
 }
 
 const MIN_FRAMES = 2;
-const MIN_TICKS = 1;
-const MAX_TICKS = 30;
 
 /** Cap for encoded GIF size. `"none"` records every frame. */
 export type GifSizeLimit = "1mb" | "2mb" | "5mb" | "none";
@@ -76,10 +74,11 @@ export function normalizeCaptureOverlay(raw: unknown): CaptureOverlaySettings {
 
 export type CaptureSettings = {
   frames: number;
-  ticksPerFrame: number;
   blockPadding: number;
   greenscreen: boolean;
   showMouse: boolean;
+  /** Pause the sim on each GIF frame and step one tick between captures. */
+  stepSimulation: boolean;
   gifSizeLimit: GifSizeLimit;
   /** Locked GIF crop from the last Lock GIF area action. */
   lockedGifBounds: CellBounds | null;
@@ -88,10 +87,10 @@ export type CaptureSettings = {
 
 export const DEFAULT_CAPTURE_SETTINGS: CaptureSettings = {
   frames: 60,
-  ticksPerFrame: MIN_TICKS,
   blockPadding: DEFAULT_BLOCK_PADDING,
   greenscreen: false,
   showMouse: false,
+  stepSimulation: false,
   gifSizeLimit: "5mb",
   lockedGifBounds: null,
   overlay: { ...DEFAULT_CAPTURE_OVERLAY },
@@ -103,12 +102,6 @@ export const GIF_SIZE_LIMIT_OPTIONS: { value: GifSizeLimit; label: string }[] = 
   { value: "5mb", label: "5 MB" },
   { value: "none", label: "No limit" },
 ];
-
-function clampInt(value: unknown, min: number, max: number, fallback: number): number {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, Math.round(n)));
-}
 
 function clampMinInt(value: unknown, min: number, fallback: number): number {
   const n = Number(value);
@@ -180,10 +173,10 @@ export function normalizeCaptureSettings(
   if (!raw || typeof raw !== "object") return { ...base };
   return {
     frames: clampMinInt(raw.frames, MIN_FRAMES, base.frames),
-    ticksPerFrame: clampInt(raw.ticksPerFrame, MIN_TICKS, MAX_TICKS, base.ticksPerFrame),
     blockPadding: clampBlockPadding(Number(raw.blockPadding ?? base.blockPadding)),
     greenscreen: clampBool(raw.greenscreen, base.greenscreen),
     showMouse: clampBool(raw.showMouse, base.showMouse),
+    stepSimulation: clampBool(raw.stepSimulation, base.stepSimulation),
     gifSizeLimit: normalizeGifSizeLimit(raw),
     lockedGifBounds: normalizeCellBounds(raw.lockedGifBounds),
     overlay: normalizeCaptureOverlay(raw.overlay),
@@ -210,9 +203,7 @@ export function saveCaptureSettings(settings: CaptureSettings): void {
 }
 
 export {
-  MAX_TICKS,
   MIN_FRAMES,
-  MIN_TICKS,
   MIN_BLOCK_PADDING,
   MAX_BLOCK_PADDING,
   MIN_OVERLAY_FONT_SIZE,

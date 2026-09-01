@@ -50,7 +50,7 @@ export async function finishCaptureCanvas(
   crop: HTMLCanvasElement,
   scale: number,
   overlay?: CaptureOverlaySettings,
-  options?: { frameIndex?: number; ticksPerFrame?: number },
+  options?: { frameIndex?: number },
 ): Promise<HTMLCanvasElement> {
   const out = scaleCanvasNearestNeighbor(crop, scale);
   if (!overlay?.enabled) return out;
@@ -62,7 +62,7 @@ export async function finishCaptureCanvas(
   const cropHeight = crop.height;
 
   if (overlay.advanced) {
-    if (options?.frameIndex != null && options.ticksPerFrame != null) {
+    if (options?.frameIndex != null) {
       setOverlayRecordingFrame(options.frameIndex);
     }
     let live = await rasterizeLiveAdvancedOverlay(

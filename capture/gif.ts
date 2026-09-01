@@ -16,15 +16,12 @@ import { SIM_MS_PER_TICK } from "../overlay/recording";
 import { captureDownloadFilename, downloadBlob, gifBytesToBlob } from "./download";
 import { GIF_MIN_FRAMES } from "./gifLimit";
 import { openGifEncodeSession, type EncodedGif } from "./gifEncode";
-import { isAbortError, setSimulationPaused, throwIfAborted, waitTicks } from "./sim";
+import { isAbortError, setSimulationPaused, throwIfAborted, waitTick } from "./sim";
 
 const MIN_FRAMES = GIF_MIN_FRAMES;
-const MIN_TICKS = 1;
-const MAX_TICKS = 30;
 
 export type RecordGifOptions = {
   frames: number;
-  ticksPerFrame: number;
   greenscreen: boolean;
   showMouse: boolean;
   /** Cap encoded GIF size. */
@@ -33,13 +30,15 @@ export type RecordGifOptions = {
   blockPadding?: number;
   /** When set, record this crop instead of reading the C marquee. */
   bounds?: CellBounds;
-  /** Post-capture nearest-neighbor upscale. Default 1. */
+  /** Post-capture nearest-neighbor upscale. Default 2. */
   scale?: number;
   signal?: AbortSignal;
   /** Called after capture, before the worker flush. */
   onEncodeStart?: () => void;
   /** Optional caption overlay composited on each frame after upscale. */
   overlay?: CaptureOverlaySettings;
+  /** Pause the sim on each painted frame and step one tick between captures. */
+  stepSimulation?: boolean;
   /** When false, skip the file download (tests). Default true. */
   download?: boolean;
 };
@@ -52,11 +51,6 @@ export type RecordGifOutcome = {
   magic?: string;
   byteLength?: number;
 };
-
-function clampInt(value: number, min: number, max: number): number {
-  if (!Number.isFinite(value)) return min;
-  return Math.min(max, Math.max(min, Math.round(value)));
-}
 
 function clampMinInt(value: number, min: number): number {
   if (!Number.isFinite(value)) return min;
@@ -83,7 +77,22 @@ async function grabPaintedFrame(
   api: SandkitApi,
   bounds: CellBounds,
   look: CaptureLook,
+  step: boolean,
 ): Promise<GrabFrameResult> {
+  if (!step) {
+    try {
+      return await grabSelectionFrame(api, bounds, look);
+    } catch (error) {
+      console.warn(`paint wait failed, retry:`, error);
+      try {
+        return await grabSelectionFrame(api, bounds, look);
+      } catch (retryError) {
+        console.warn(`paint wait failed:`, retryError);
+        return { status: "failed" };
+      }
+    }
+  }
+
   if (getSession()?.paused === true) setSimulationPaused(false);
   try {
     return await grabSelectionFrame(api, bounds, look, () => setSimulationPaused(true));
@@ -100,15 +109,16 @@ async function grabPaintedFrame(
 }
 
 /**
- * Pause, capture N frames with `ticksPerFrame` sim ticks between them, encode a GIF, and download it.
+ * Capture N frames, one sim tick apart. Free mode keeps the sim running.
+ * Step mode pauses on each painted frame.
  */
 export async function recordSelectionGifOutcome(
   api: SandkitApi,
   options: RecordGifOptions,
 ): Promise<RecordGifOutcome> {
   const framesWanted = clampMinInt(options.frames, MIN_FRAMES);
-  const ticksPerFrame = clampInt(options.ticksPerFrame, MIN_TICKS, MAX_TICKS);
-  const delayMs = Math.max(SIM_MS_PER_TICK, ticksPerFrame * SIM_MS_PER_TICK);
+  const step = options.stepSimulation === true;
+  const delayMs = SIM_MS_PER_TICK;
   const look: CaptureLook = {
     greenscreen: options.greenscreen,
     showMouse: options.showMouse,
@@ -127,15 +137,13 @@ export async function recordSelectionGifOutcome(
   console.log(`record start`, {
     bounds,
     framesWanted,
-    ticksPerFrame,
     scale,
     maxBytes,
     greenscreen: look.greenscreen,
     showMouse: look.showMouse,
     gifSizeLimit: options.gifSizeLimit,
+    stepSimulation: step,
   });
-
-  throwIfAborted(options.signal);
 
   const overlay = options.overlay;
   const overlayEnabled = overlay?.enabled === true;
@@ -146,17 +154,14 @@ export async function recordSelectionGifOutcome(
   let acceptedFrames = 0;
 
   try {
-    if (advanced) beginOverlayRecording(ticksPerFrame);
+    setSimulationPaused(false);
+    throwIfAborted(options.signal);
+    if (advanced) beginOverlayRecording();
     try {
       for (let i = 0; i < framesWanted; i++) {
-        if (i > 0) {
-          await waitTicks(api, ticksPerFrame, options.signal);
-          throwIfAborted(options.signal);
-        }
-
         if (overlay?.advanced) setOverlayRecordingFrame(i);
 
-        const grab = await grabPaintedFrame(api, bounds, look);
+        const grab = await grabPaintedFrame(api, bounds, look, step);
         throwIfAborted(options.signal);
         if (grab.status !== "ok") {
           if (i === 0) return outcome(grab.status === "out-of-view" ? "out-of-view" : "failed");
@@ -166,7 +171,6 @@ export async function recordSelectionGifOutcome(
 
         const frame = await finishCaptureCanvas(grab.canvas, scale, overlayEnabled ? overlay : undefined, {
           frameIndex: i,
-          ticksPerFrame,
         });
         const rgba = canvasToRgba(frame);
         if (!rgba) return outcome("failed");
@@ -181,6 +185,8 @@ export async function recordSelectionGifOutcome(
           });
         }
 
+        const wait =
+          i < framesWanted - 1 ? waitTick(api, options.signal, { step }) : Promise.resolve();
         const added = await session.addFrame(rgba, options.signal);
         if (!added.accepted) {
           hitLimit = true;
@@ -190,6 +196,8 @@ export async function recordSelectionGifOutcome(
         if (i === 0 || i % 10 === 0) {
           console.log(`captured frame ${i + 1}/${framesWanted}`);
         }
+        await wait;
+        throwIfAborted(options.signal);
       }
     } finally {
       if (advanced) endOverlayRecording();

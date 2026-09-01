@@ -9,7 +9,7 @@ import { snapshotOverlayRootHtml } from "./snapshot";
 const HOST_ID = `${modinfo.id}:advanced-overlay-preview`;
 
 let lastContentKey = "";
-let recordingTicksPerFrame = 0;
+let overlayRecording = false;
 let recordingFrameIndex = -1;
 
 function getHost(): HTMLDivElement {
@@ -67,39 +67,37 @@ export function setAdvancedOverlayAnimationTime(ms: number): void {
 }
 
 export function isOverlayRecordingActive(): boolean {
-  return recordingTicksPerFrame > 0;
+  return overlayRecording;
 }
 
 /** Pause wall-clock overlay motion; GIF frames advance via {@link setOverlayRecordingFrame}. */
-export function beginOverlayRecording(ticksPerFrame: number): void {
-  recordingTicksPerFrame = Math.max(1, Math.round(ticksPerFrame));
+export function beginOverlayRecording(): void {
+  overlayRecording = true;
   recordingFrameIndex = -1;
   const root = overlayRoot();
   if (root) pauseOverlayAnimations(root);
 }
 
 export function setOverlayRecordingFrame(frameIndex: number): void {
-  if (recordingTicksPerFrame <= 0) return;
+  if (!overlayRecording) return;
   recordingFrameIndex = frameIndex;
-  setAdvancedOverlayAnimationTime(overlayRecordingTimeMs(frameIndex, recordingTicksPerFrame));
+  setAdvancedOverlayAnimationTime(overlayRecordingTimeMs(frameIndex));
 }
 
 export function endOverlayRecording(): void {
-  recordingTicksPerFrame = 0;
+  overlayRecording = false;
   recordingFrameIndex = -1;
   const root = overlayRoot();
   if (root) playOverlayAnimations(root);
 }
 
 function syncRecordingOverlayPose(): void {
-  if (recordingTicksPerFrame <= 0) return;
+  if (!overlayRecording) return;
   const root = overlayRoot();
   if (!root) return;
   pauseOverlayAnimations(root);
   if (recordingFrameIndex >= 0) {
-    setAdvancedOverlayAnimationTime(
-      overlayRecordingTimeMs(recordingFrameIndex, recordingTicksPerFrame),
-    );
+    setAdvancedOverlayAnimationTime(overlayRecordingTimeMs(recordingFrameIndex));
   }
 }
 

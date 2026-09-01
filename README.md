@@ -4,7 +4,7 @@ Workshop: [Screenshot and GIF recorder](https://steamcommunity.com/sharedfiles/f
 
 Pixel-perfect PNG and GIF of your **C** selection.
 
-Share a machine, a line, or a whole scene without a blurry screenshot. **Screenshot** copies a nearest-neighbor PNG. **Record GIF** steps the sim and downloads an animation.
+Share a machine, a line, or a whole scene without a blurry screenshot. **Screenshot** copies a nearest-neighbor PNG. **Record GIF** records the live sim and downloads an animation.
 
 ## Use
 
@@ -15,17 +15,17 @@ Share a machine, a line, or a whole scene without a blurry screenshot. **Screens
 
 - **F7** — open or close the panel (title-bar ✕ also closes)
 - **Screenshot** — copy a PNG; paste with **Ctrl+V** (or download — see **Options → Mods**)
-- **Record GIF** — record an animated GIF of sim ticks; the `.gif` downloads
+- **Record GIF** — record an animated GIF while the sim runs; the `.gif` downloads
 
 Set keys for **Screenshot** and **Record GIF** in Options → Controls. The panel buttons show those keys when bound.
 
 ## Panel
 
 - **Frames** — minimum 2 (default 60). No upper limit.
-- **Ticks / frame** — 1–30 (default 1)
 - **Block padding** — 0–32 (default 1). Extra structure blocks around the crop. Use **0** for a tight crop. Raise it when light halos clip.
 - **Greenscreen** — on/off (default off)
 - **Show mouse** — on/off (default off)
+- **Step sim** — off (default) records while the sim runs. On pauses and steps one tick per frame.
 - **GIF size limit** — **1 MB**, **2 MB**, **5 MB**, or **No limit** (default **5 MB**). Record GIF stops when the next frame would pass the cap. **No limit** keeps every frame.
 - **Overlay** — optional caption on PNG/GIF. Simple mode: text, font size, vertical and horizontal align. Advanced mode: custom HTML/CSS with a live animated preview in the capture box (PNG/GIF freeze the current frame). Overlay is drawn after upscale.
 
@@ -35,7 +35,7 @@ Panel settings are saved between sessions.
 
 **Download PNG** — under **Options → Mods**, save a PNG file instead of copying to the clipboard. The panel button switches between **Copy PNG** and **Download PNG**.
 
-**PNG upscale** and **GIF upscale** — under **Options → Mods**, nearest-neighbor upscale after capture (1–8, default 1). Separate settings for screenshot and GIF.
+**PNG upscale** and **GIF upscale** — under **Options → Mods**, nearest-neighbor upscale after capture (1–8, default 2). Separate settings for screenshot and GIF.
 
 While the panel is open, an **orange** outline shows the live **C** selection and a locked capture area. During GIF capture the outline turns **red**; during encode it turns **blue**. The countdown stays **orange**. Close the panel (F7) to hide all outlines.
 
@@ -43,9 +43,9 @@ While the panel is open, an **orange** outline shows the live **C** selection an
 
 **Show mouse** draws the in-game cursor into the PNG or GIF when the pointer tip is inside the selection.
 
-**GIF size limit** encodes each prefix while recording and **stops** when the next frame would pass the cap (**1 MB**, **2 MB**, or **5 MB**; default **5 MB**). **No limit** (last in the list) keeps every frame. Use **1 MB** for Steam Workshop thumbnails. If even two frames are over the cap, crop a smaller box. A toast warns when the selection is too large for 60 fps (more than 1280×720 encoded pixels after upscale).
+**GIF size limit** encodes each prefix while recording and **stops** when the next frame would pass the cap (**1 MB**, **2 MB**, or **5 MB**; default **5 MB**). **No limit** (last in the list) keeps every frame. Use **1 MB** for Steam Workshop thumbnails. If even two frames are over the cap, crop a smaller box.
 
-**Screenshot** and **Record GIF** both use a locked capture area when one is set; otherwise they use the live **C** selection. **Record GIF** waits for the **Countdown**, then pauses the sim on each painted frame and steps the ticks you set before the next capture. Use **Capture area** to pin the crop from your current **C** selection — you can clear select and keep building while the panel stays open and the orange outline shows. After each frame the GIF encodes so recording can stop at the size cap. Set **PNG upscale** / **GIF upscale** under **Options → Mods** (default 1×). Overlay text is drawn after upscale. The file downloads. The row shows the countdown, then **Recording…**. The button is **Cancel** in all of those cases.
+**Screenshot** and **Record GIF** both use a locked capture area when one is set; otherwise they use the live **C** selection. **Record GIF** waits for the **Countdown**, then captures one frame per sim tick. With **Step sim** off, the sim keeps running. With **Step sim** on, the sim pauses on each painted frame. Use **Capture area** to pin the crop from your current **C** selection — you can clear select and keep building while the panel stays open and the orange outline shows. After each frame the GIF encodes so recording can stop at the size cap. Set **PNG upscale** / **GIF upscale** under **Options → Mods** (default 2×). Overlay text is drawn after upscale. The file downloads. The row shows the countdown, then **Recording…**. The button is **Cancel** in all of those cases.
 
 **Record GIF** exits **C** select mode when recording starts (clears the selection and restores the normal cursor) so you can keep building. The crop stays the box you selected. Select mode is not restored when the GIF finishes.
 
@@ -54,7 +54,6 @@ While the panel is open, an **orange** outline shows the live **C** selection an
 - The crop follows selected structure footprints when present, otherwise the marquee content. **Block padding** adds extra structure blocks on every side. Crops align to whole cell pixels.
 - Overlay chrome (handles, HUD) is not in the image. Signal wires and structure hover highlights on the overlay canvas are included.
 - A selection that is off-screen cannot be captured. Pan the camera and try again.
-- A toast warns when a GIF selection is too large for 60 fps (more than 1280×720 encoded pixels).
 
 ## Workshop
 

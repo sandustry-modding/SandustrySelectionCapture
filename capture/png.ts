@@ -18,7 +18,7 @@ export type CapturePngOptions = SelectionBoundsOptions & {
   lockedBounds?: CellBounds | null;
   /** When true, download a PNG file instead of copying to the clipboard. */
   download?: boolean;
-  /** Post-capture nearest-neighbor upscale. Default 1. */
+  /** Post-capture nearest-neighbor upscale. Default 2. */
   scale?: number;
   /** Optional caption overlay composited after upscale. */
   overlay?: CaptureOverlaySettings;
@@ -80,7 +80,12 @@ export async function captureSelectionPngOutcome(
   if (wasPaused) setSimulationPaused(false);
   const restoreLook = applyCaptureLook(look);
   try {
-    const grab = await grabSelectionFrame(api, bounds, look, () => setSimulationPaused(true));
+    const grab = await grabSelectionFrame(
+      api,
+      bounds,
+      look,
+      wasPaused ? () => setSimulationPaused(true) : undefined,
+    );
     if (grab.status !== "ok") {
       return { result: grab.status === "out-of-view" ? "out-of-view" : "failed" };
     }

@@ -36,7 +36,7 @@ export const modinfo = defineModInfo({
     },
     pngScale: {
       type: "number",
-      default: 1,
+      default: 2,
       min: 1,
       max: 8,
       step: 1,
@@ -45,7 +45,7 @@ export const modinfo = defineModInfo({
     },
     gifScale: {
       type: "number",
-      default: 1,
+      default: 2,
       min: 1,
       max: 8,
       step: 1,

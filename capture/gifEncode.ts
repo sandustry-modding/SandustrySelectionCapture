@@ -95,6 +95,7 @@ export async function openGifEncodeSession(options: {
   }
 
   let closed = false;
+  let chain: Promise<void> = Promise.resolve();
   const close = () => {
     if (closed) return;
     closed = true;
@@ -115,15 +116,27 @@ export async function openGifEncodeSession(options: {
       if (closed) throw new DOMException("Aborted", "AbortError");
       const copy = new Uint8Array(rgba.byteLength);
       copy.set(rgba);
-      const pending = waitForReply(worker, "frame");
-      worker.postMessage({ type: "frame", rgba: copy.buffer }, [copy.buffer]);
-      const frameReply = await pending;
-      if (frameReply.type !== "frame") {
-        throw new Error("GIF worker frame reply missing");
-      }
-      return frameReply;
+      const run = chain.then(async () => {
+        throwIfAborted(signal);
+        if (closed) throw new DOMException("Aborted", "AbortError");
+        const pending = waitForReply(worker, "frame");
+        worker.postMessage({ type: "frame", rgba: copy.buffer }, [copy.buffer]);
+        const frameReply = await pending;
+        if (frameReply.type !== "frame") {
+          throw new Error("GIF worker frame reply missing");
+        }
+        return frameReply;
+      });
+      chain = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      return run;
     },
     async finish(signal) {
+      throwIfAborted(signal);
+      if (closed) throw new DOMException("Aborted", "AbortError");
+      await chain;
       throwIfAborted(signal);
       if (closed) throw new DOMException("Aborted", "AbortError");
       const pending = waitForReply(worker, "done");

@@ -28,10 +28,10 @@ export function setSimulationPaused(paused: boolean): void {
   }
 }
 
-export function waitTicks(
+export function waitTick(
   api: SandkitApi,
-  count: number,
   signal: AbortSignal | undefined,
+  options?: { step?: boolean },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -39,9 +39,9 @@ export function waitTicks(
       return;
     }
 
-    let left = count;
+    const step = options?.step === true;
     const timeoutId = setTimeout(() => {
-      setSimulationPaused(true);
+      if (step) setSimulationPaused(true);
       reject(new Error("tick wait timed out"));
     }, 15_000);
 
@@ -51,21 +51,14 @@ export function waitTicks(
     };
     signal?.addEventListener("abort", onAbort, { once: true });
 
-    const step = () => {
+    if (step) setSimulationPaused(false);
+    api.schedule.nextTick(() => {
       if (signal?.aborted) return;
-      left -= 1;
-      if (left <= 0) {
-        clearTimeout(timeoutId);
-        signal?.removeEventListener("abort", onAbort);
-        setSimulationPaused(true);
-        resolve();
-        return;
-      }
-      api.schedule.nextTick(step);
-    };
-
-    api.schedule.nextTick(step);
-    setSimulationPaused(false);
+      clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", onAbort);
+      if (step) setSimulationPaused(true);
+      resolve();
+    });
   });
 }
 

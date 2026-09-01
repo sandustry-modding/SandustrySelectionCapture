@@ -23,9 +23,7 @@ import {
   GIF_SIZE_LIMIT_OPTIONS,
   gifSizeLimitLabel,
   loadCaptureSettings,
-  MAX_TICKS,
   MIN_FRAMES,
-  MIN_TICKS,
   MAX_OVERLAY_FONT_SIZE,
   MIN_OVERLAY_FONT_SIZE,
   saveCaptureSettings,
@@ -37,7 +35,6 @@ import { waitCountdownSeconds } from "../capture/countdown";
 import { modinfo } from "../modinfo";
 import { DEFAULT_ADVANCED_OVERLAY_HTML } from "../overlay/html";
 import { recordSelectionGif } from "../capture/gif";
-import { gifBoundsTooLargeFor60Fps } from "../capture/size";
 import {
   clampBlockPadding,
   getSelectionCellBounds,
@@ -141,10 +138,10 @@ export function Overlay() {
   const [settings, setSettings] = useState<CaptureSettings>(loadCaptureSettings);
   const {
     frames,
-    ticksPerFrame,
     blockPadding,
     greenscreen,
     showMouse,
+    stepSimulation,
     gifSizeLimit,
     lockedGifBounds,
     overlay,
@@ -220,9 +217,6 @@ export function Overlay() {
       return;
     }
     const gifScale = modGifScale(api);
-    if (gifBoundsTooLargeFor60Fps(api, rawBounds, gifScale)) {
-      api.ui.toast("This selection is too large for 60 fps", {});
-    }
     setFrozenBounds(rawBounds);
     setPhase("countdown");
     void (async () => {
@@ -241,7 +235,6 @@ export function Overlay() {
         setPhase("recording");
         const result = await recordSelectionGif(api, {
           frames,
-          ticksPerFrame,
           greenscreen,
           showMouse,
           gifSizeLimit,
@@ -250,6 +243,7 @@ export function Overlay() {
           scale: gifScale,
           signal: abort.signal,
           overlay,
+          stepSimulation,
           onEncodeStart: () => setPhase("encoding"),
         });
         const sizeLabel = gifSizeLimitLabel(gifSizeLimit);
@@ -339,11 +333,7 @@ export function Overlay() {
       return;
     }
     patchSettings({ lockedGifBounds: bounds });
-    if (gifBoundsTooLargeFor60Fps(api, bounds, modGifScale(api))) {
-      api.ui.toast("Capture area locked — too large for 60 fps", {});
-    } else {
-      api.ui.toast("Capture area locked", {});
-    }
+    api.ui.toast("Capture area locked", {});
   }
 
   function clearLockedGifArea() {
@@ -382,20 +372,6 @@ export function Overlay() {
                 }
               />
             </OptionsRow>
-            <OptionsRow label="Ticks / frame">
-              <OptionsNumberInput
-                value={ticksPerFrame}
-                min={MIN_TICKS}
-                max={MAX_TICKS}
-                disabled={busy}
-                aria-label="Ticks per frame"
-                onChange={(value) =>
-                  patchSettings({
-                    ticksPerFrame: clampInt(value, MIN_TICKS, MAX_TICKS),
-                  })
-                }
-              />
-            </OptionsRow>
             <OptionsRow label="Block padding">
               <OptionsNumberInput
                 value={blockPadding}
@@ -418,6 +394,13 @@ export function Overlay() {
                 checked={showMouse}
                 disabled={busy}
                 onChange={(checked) => patchSettings({ showMouse: checked })}
+              />
+            </OptionsRow>
+            <OptionsRow label="Step sim">
+              <OptionsSwitch
+                checked={stepSimulation}
+                disabled={busy}
+                onChange={(checked) => patchSettings({ stepSimulation: checked })}
               />
             </OptionsRow>
             <OptionsRow

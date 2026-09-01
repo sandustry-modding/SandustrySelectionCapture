@@ -232,8 +232,8 @@ export function rasterizeSelection(
  * That event fires just before `texture.update` + Pixi render — a sync read is
  * still the sky clear. Waiting an extra `await` hop is too late (WebGL buffer gone).
  *
- * `onPaint` runs in the render listener (before the copy) so the sim can pause
- * while a large crop is still on the main thread.
+ * `onPaint` runs in the render listener (before the copy). PNG uses it to freeze
+ * a paused game for one still. GIF step mode pauses on paint; free mode does not.
  */
 export function grabSelectionFrame(
   api: SandkitApi,

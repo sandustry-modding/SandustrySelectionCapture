@@ -41,7 +41,6 @@ test("normalizeCaptureSettings clamps invalid values", () => {
   assert.deepEqual(
     normalizeCaptureSettings({
       frames: 999,
-      ticksPerFrame: 0,
       blockPadding: -5,
       greenscreen: true,
       showMouse: "yes",
@@ -49,10 +48,10 @@ test("normalizeCaptureSettings clamps invalid values", () => {
     } as unknown as Partial<CaptureSettings>),
     {
       frames: 999,
-      ticksPerFrame: 1,
       blockPadding: -5,
       greenscreen: true,
       showMouse: false,
+      stepSimulation: false,
       gifSizeLimit: "5mb",
       lockedGifBounds: null,
       overlay: {
@@ -133,10 +132,10 @@ test("normalizeCaptureOverlay clamps vertical align and fills defaults", () => {
 test("saveCaptureSettings and loadCaptureSettings round-trip", () => {
   const settings = {
     frames: 24,
-    ticksPerFrame: 3,
     blockPadding: 2,
     greenscreen: true,
     showMouse: true,
+    stepSimulation: true,
     gifSizeLimit: "2mb" as const,
     lockedGifBounds: { minX: 0, minY: 0, maxX: 3, maxY: 3 },
     overlay: {

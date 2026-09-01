@@ -6,7 +6,7 @@ export const DEFAULT_COUNTDOWN = 3;
 /** Keep in sync with `pngScale` / `gifScale` in `../modinfo.ts`. */
 export const MIN_CAPTURE_SCALE = 1;
 export const MAX_CAPTURE_SCALE = 8;
-export const DEFAULT_CAPTURE_SCALE = 1;
+export const DEFAULT_CAPTURE_SCALE = 2;
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
   const n = Number(value);

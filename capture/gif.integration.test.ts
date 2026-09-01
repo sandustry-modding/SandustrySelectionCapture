@@ -15,6 +15,8 @@ type CaptureOutcome = {
   frameCount?: number;
   magic?: string;
   byteLength?: number;
+  pausedHits?: number;
+  ticks?: number;
 };
 
 type TestHook = {
@@ -25,7 +27,6 @@ type TestHook = {
   recordGif: (args: {
     bounds: CellBounds | null;
     frames?: number;
-    ticksPerFrame?: number;
     scale?: number;
     abortImmediately?: boolean;
   }) => Promise<CaptureOutcome>;
@@ -99,7 +100,7 @@ describe("selection-capture grab", { concurrency: false }, () => {
     const gif = await game.evaluate(
       async (key: string, bounds: CellBounds) => {
         const live = (globalThis as unknown as Record<string, TestHook>)[key];
-        return live.recordGif({ bounds, frames: 2, ticksPerFrame: 1, scale: 1 });
+        return live.recordGif({ bounds, frames: 2, scale: 1 });
       },
       HOOK_KEY,
       crop!.bounds,
@@ -126,7 +127,6 @@ describe("selection-capture grab", { concurrency: false }, () => {
         return live.recordGif({
           bounds,
           frames: 4,
-          ticksPerFrame: 1,
           abortImmediately: true,
         });
       },
@@ -147,5 +147,34 @@ describe("selection-capture grab", { concurrency: false }, () => {
       return live.recordGif({ bounds: null, frames: 2 });
     }, HOOK_KEY);
     assert.equal(gif.result, "no-selection");
+  });
+
+  test("GIF record does not pause the sim", async (t) => {
+    const ids = await game.orderedModIds();
+    if (!ids.includes(MOD_ID) || !(await hook())) {
+      t.skip(`${MOD_ID} is not loaded`);
+      return;
+    }
+    await game.resumeSimulation();
+    const crop = await playerCrop();
+    assert.ok(crop);
+    const frames = 8;
+    const gif = await game.evaluate(
+      async (key: string, bounds: CellBounds, frameCount: number) => {
+        const live = (globalThis as unknown as Record<string, TestHook>)[key];
+        return live.recordGif({
+          bounds,
+          frames: frameCount,
+          scale: 1,
+        });
+      },
+      HOOK_KEY,
+      crop!.bounds,
+      frames,
+    );
+    assert.equal(gif.result, "ok");
+    assert.equal(gif.frameCount, frames);
+    assert.equal(gif.pausedHits, 0);
+    assert.ok((gif.ticks ?? 0) >= frames - 1);
   });
 });

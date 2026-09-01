@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added: **Step sim** — off keeps the sim running (default); on pauses and steps one tick per GIF frame.
+- Changed: PNG upscale and GIF upscale default to 2×.
+- Removed: **Ticks / frame** panel option. Record GIF captures one sim tick per frame.
+- Removed: toast when a GIF crop is too large for 60 fps.
+- Changed: Record GIF keeps the pixel sim running. It no longer pauses workers between frames.
 - Changed: Record GIF encodes each frame while you record, then stops at the size cap. Encoding no longer waits until every frame is stored.
 - Added: GIF size limit includes **No limit** as the last option. Record GIF then keeps every frame.
 - Fixed: Screenshot and Record GIF capture the selection again (PNG copy/download and GIF download).
