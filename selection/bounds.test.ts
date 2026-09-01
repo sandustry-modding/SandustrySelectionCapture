@@ -15,7 +15,7 @@ import {
   insetBounds,
   tightenBoundsToMapData,
   unionBounds,
-} from "./selectionBounds.ts";
+} from "./bounds.ts";
 
 type Host = typeof globalThis & { sandkit?: typeof sandkit };
 const host = globalThis as Host;

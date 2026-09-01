@@ -2,20 +2,16 @@ import {
   expandScreenRectOutlineOutward,
   getSelectionScreenRect,
   type ScreenRect,
-} from "./captureFrame";
-import {
-  hideAdvancedOverlayDomPreview,
-  syncAdvancedOverlayDomPreview,
-} from "./advancedOverlayDomPreview";
-import { drawSimpleOverlayInScreenRect } from "./captureOverlay";
-import type { CaptureOverlaySettings } from "./captureSettings";
-import { isCapturePreviewOverlayPaintEnabled } from "./overlayPanelOpen.ts";
+} from "../selection/screenRect";
+import { hideAdvancedOverlayDomPreview, syncAdvancedOverlayDomPreview } from "../overlay/advanced";
+import { drawSimpleOverlayInScreenRect } from "../overlay/simple";
+import type { CaptureOverlaySettings } from "../settings/panel";
 import {
   cellBoundsEqual,
   getSelectionCellBounds,
   type CellBounds,
   type SelectionBoundsOptions,
-} from "./selectionBounds";
+} from "../selection/bounds";
 
 const PREVIEW_OUTLINE_IDLE = "rgba(255, 165, 0, 0.85)";
 const PREVIEW_OUTLINE_RECORDING = "rgba(255, 0, 0, 0.75)";
@@ -103,12 +99,7 @@ export function installCaptureAreaPreview(readState: () => CapturePreviewState):
         strokeBounds(ctx, api, liveBounds, PREVIEW_OUTLINE_IDLE, PREVIEW_OUTLINE_WIDTH);
       }
 
-      if (
-        isCapturePreviewOverlayPaintEnabled() &&
-        previewRect &&
-        overlay?.enabled &&
-        !overlay.advanced
-      ) {
+      if (previewRect && overlay?.enabled && !overlay.advanced) {
         drawSimpleOverlayInScreenRect(ctx, overlay, previewRect);
       }
 

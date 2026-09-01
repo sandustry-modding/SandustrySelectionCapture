@@ -6,7 +6,7 @@ import {
   expandScreenRectOutlineOutward,
   getSelectionScreenRect,
   screenRectFromCellCorners,
-} from "./captureFrame.ts";
+} from "./screenRect.ts";
 
 test("BORDER_PX defaults to 0 for exact cell crops", () => {
   assert.equal(BORDER_PX, 0);

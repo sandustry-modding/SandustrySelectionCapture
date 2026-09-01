@@ -2,7 +2,5 @@
   "name": "selection-capture",
   "private": true,
   "type": "module",
-  "dependencies": {
-    "modern-gif": "^2.1.0"
-  }
+  "dependencies": {}
 }

@@ -1,9 +1,9 @@
-import { getSelectionScreenRect } from "./captureFrame.ts";
-import type { CellBounds } from "./selectionBounds";
+import { getSelectionScreenRect } from "../selection/screenRect.ts";
+import type { CellBounds } from "../selection/bounds";
 
 /**
- * Encoded pixel count above this cannot keep 60 fps (readback + GIF encode).
- * 1280×720 is a full HD 16:9 frame — larger crops hitch the capture loop.
+ * Encoded pixel count above this cannot keep 60 fps.
+ * 1280×720 is a full HD 16:9 frame.
  */
 export const GIF_60FPS_MAX_PIXELS = 1280 * 720;
 

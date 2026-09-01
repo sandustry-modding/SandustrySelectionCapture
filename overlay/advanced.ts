@@ -1,9 +1,8 @@
 import { modinfo } from "../modinfo";
-import { buildAdvancedOverlayFrameHtml, rasterizeForeignHtml } from "./captureOverlay";
-import type { CaptureOverlaySettings } from "./captureSettings";
-import { screenRectToViewportRect, type ScreenRect } from "./captureFrame";
-import { snapshotOverlayRootHtml } from "./overlayDomSnapshot";
-import { overlayRecordingTimeMs } from "./overlayRecording";
+import { buildAdvancedOverlayFrameHtml } from "./html";
+import type { CaptureOverlaySettings } from "../settings/panel";
+import { screenRectToViewportRect, type ScreenRect } from "../selection/screenRect";
+import { overlayRecordingTimeMs } from "./recording";
 
 const HOST_ID = `${modinfo.id}:advanced-overlay-preview`;
 
@@ -144,27 +143,6 @@ export function syncAdvancedOverlayDomPreview(
   if (isOverlayRecordingActive()) {
     syncRecordingOverlayPose();
   }
-}
-
-/** Rasterize the live overlay at crop pixels (optional upscale via SVG viewBox). */
-export async function rasterizeLiveAdvancedOverlay(
-  cropWidth: number,
-  cropHeight: number,
-  outputWidth = cropWidth,
-  outputHeight = cropHeight,
-): Promise<ImageData | null> {
-  const root = overlayRoot();
-  if (!root) return null;
-  void root.offsetWidth;
-  const html = await snapshotOverlayRootHtml(root);
-  if (!html) return null;
-  return rasterizeForeignHtml(
-    html,
-    cropWidth,
-    cropHeight,
-    outputWidth,
-    outputHeight,
-  );
 }
 
 export function hideAdvancedOverlayDomPreview(): void {

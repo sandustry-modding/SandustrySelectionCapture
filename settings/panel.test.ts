@@ -9,9 +9,8 @@ import {
   normalizeCaptureSettings,
   saveCaptureSettings,
   type CaptureSettings,
-} from "./captureSettings.ts";
-import type { CellBounds } from "./selectionBounds.ts";
-import { GIF_1MB, GIF_2MB, GIF_5MB } from "./encodeGifLimit.ts";
+} from "./panel.ts";
+import type { CellBounds } from "../selection/bounds.ts";
 
 const STORAGE_KEY = "irishbruse.selection-capture.settings";
 
@@ -91,9 +90,9 @@ test("normalizeCaptureSettings maps legacy none to 5mb", () => {
 });
 
 test("gifSizeLimitBytes and gifSizeLimitLabel cover each option", () => {
-  assert.equal(gifSizeLimitBytes("1mb"), GIF_1MB);
-  assert.equal(gifSizeLimitBytes("2mb"), GIF_2MB);
-  assert.equal(gifSizeLimitBytes("5mb"), GIF_5MB);
+  assert.equal(gifSizeLimitBytes("1mb"), 1024 * 1024);
+  assert.equal(gifSizeLimitBytes("2mb"), 2 * 1024 * 1024);
+  assert.equal(gifSizeLimitBytes("5mb"), 5 * 1024 * 1024);
   assert.equal(gifSizeLimitLabel("1mb"), "1 MB");
   assert.equal(gifSizeLimitLabel("2mb"), "2 MB");
   assert.equal(gifSizeLimitLabel("5mb"), "5 MB");

@@ -1,4 +1,4 @@
-import type { CellBounds } from "./selectionBounds";
+import type { CellBounds } from "../selection/bounds";
 
 const STORAGE_KEY = "irishbruse.selection-capture.settings";
 

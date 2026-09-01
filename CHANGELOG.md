@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Removed: canvas readback PNG/GIF capture (too slow). Panel, overlay preview, and settings stay; fill in `capture/grab.ts` for the new path.
+
 ## 0.7.0
 
 - Fixed: overlay on PNG screenshots appeared tiny in the top-left when **PNG upscale** was above 1×.

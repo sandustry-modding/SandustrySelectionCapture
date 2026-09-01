@@ -11,9 +11,9 @@ import {
   OptionsSwitch,
   OverlayRoot,
 } from "@modkit/ui";
-import { captureSelectionPng } from "../capture/capturePng";
-import { hideAdvancedOverlayDomPreview } from "../capture/advancedOverlayDomPreview";
-import { installCaptureAreaPreview, type CapturePreviewState } from "../capture/capturePreview";
+import { captureSelectionPng } from "../capture/png";
+import { hideAdvancedOverlayDomPreview } from "../overlay/advanced";
+import { installCaptureAreaPreview, type CapturePreviewState } from "../preview/crop";
 import { FloatingWindow } from "./FloatingWindow";
 import {
   GIF_SIZE_LIMIT_OPTIONS,
@@ -27,14 +27,13 @@ import {
   saveCaptureSettings,
   type CaptureSettings,
   type GifSizeLimit,
-} from "../capture/captureSettings";
-import { modCountdownSeconds, modDownloadPng } from "../capture/modCountdown";
-import { modGifScale, modPngScale } from "../capture/modScale";
+} from "../settings/panel";
+import { modCountdownSeconds, modDownloadPng, modGifScale, modPngScale } from "../settings/mods";
 import { waitCountdownSeconds } from "../capture/countdown";
 import { modinfo } from "../modinfo";
-import { DEFAULT_ADVANCED_OVERLAY_HTML } from "../capture/captureOverlay";
-import { recordSelectionGif } from "../capture/recordGif";
-import { gifBoundsTooLargeFor60Fps } from "../capture/gifCaptureSize";
+import { DEFAULT_ADVANCED_OVERLAY_HTML } from "../overlay/html";
+import { recordSelectionGif } from "../capture/gif";
+import { gifBoundsTooLargeFor60Fps } from "../capture/size";
 import {
   clampBlockPadding,
   getSelectionCellBounds,
@@ -42,7 +41,7 @@ import {
   MAX_BLOCK_PADDING,
   MIN_BLOCK_PADDING,
   type CellBounds,
-} from "../capture/selectionBounds";
+} from "../selection/bounds";
 
 /** Game `registerBinding` forwards `displayNameKey`, not `displayName`. */
 const BINDINGS = {
