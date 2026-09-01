@@ -2,17 +2,17 @@
 
 ## Unreleased
 
-- Added: **Optimize GIF** — after capture, re-encode with a shared palette and cropped frame diffs (only pixels that changed). The GIF size cap applies to that re-encoded file.
-- Added: **Step sim** — off keeps the sim running (default); on pauses and steps one tick per GIF frame.
+## 0.8.0
+
+- Changed: Record GIF keeps the sim running. Falling sand and machines keep moving while you record.
+- Changed: Without **Optimize GIF**, each frame encodes while you record so capture can stop at the size cap.
+- Added: **Step sim** — off (default) records while the sim runs. On pauses and steps one tick per frame.
+- Added: **Optimize GIF** — after capture, re-encode to cut file size (shared palette and only the rectangle of pixels that changed). The size cap applies to that file.
+- Added: GIF size limit includes **No limit**. Record GIF then keeps every frame.
 - Changed: PNG upscale and GIF upscale default to 2×.
-- Removed: **Ticks / frame** panel option. Record GIF captures one sim tick per frame.
-- Removed: toast when a GIF crop is too large for 60 fps.
-- Changed: Record GIF keeps the pixel sim running. It no longer pauses workers between frames.
-- Changed: Record GIF encodes each frame while you record, then stops at the size cap. Encoding no longer waits until every frame is stored.
-- Added: GIF size limit includes **No limit** as the last option. Record GIF then keeps every frame.
+- Removed: **Ticks / frame**. Record GIF captures one sim tick per frame.
 - Fixed: Screenshot and Record GIF capture the selection again (PNG copy/download and GIF download).
-- Fixed: the red recording outline (and blue encoding outline) show on the selection while a GIF records.
-- Fixed: GIF size caps use 1,000,000 bytes per MB, so a **5 MB** GIF stays at or under 5,000,000 bytes.
+- Fixed: the red recording outline and the blue encoding outline show while a GIF records.
 
 ## 0.7.0
 
