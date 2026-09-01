@@ -26,7 +26,8 @@ Set keys for **Screenshot** and **Record GIF** in Options → Controls. The pane
 - **Greenscreen** — on/off (default off)
 - **Show mouse** — on/off (default off)
 - **Step sim** — off (default) records while the sim runs. On pauses and steps one tick per frame.
-- **GIF size limit** — **1 MB**, **2 MB**, **5 MB**, or **No limit** (default **5 MB**). Record GIF stops when the next frame would pass the cap. **No limit** keeps every frame.
+- **Optimize GIF** — off (default). On re-encodes after capture: one shared palette, and later frames store only the rectangle of pixels that changed.
+- **GIF size limit** — **1 MB**, **2 MB**, **5 MB**, or **No limit** (default **5 MB**). The saved GIF stays at or under this size. With **Optimize GIF** on, Record GIF captures every requested frame, then drops frames from the end after re-encode if needed. Without it, recording stops when the next live frame would pass the cap. **No limit** keeps every frame.
 - **Overlay** — optional caption on PNG/GIF. Simple mode: text, font size, vertical and horizontal align. Advanced mode: custom HTML/CSS with a live animated preview in the capture box (PNG/GIF freeze the current frame). Overlay is drawn after upscale.
 
 Panel settings are saved between sessions.
@@ -43,9 +44,9 @@ While the panel is open, an **orange** outline shows the live **C** selection an
 
 **Show mouse** draws the in-game cursor into the PNG or GIF when the pointer tip is inside the selection.
 
-**GIF size limit** encodes each prefix while recording and **stops** when the next frame would pass the cap (**1 MB**, **2 MB**, or **5 MB**; default **5 MB**). **No limit** (last in the list) keeps every frame. Use **1 MB** for Steam Workshop thumbnails. If even two frames are over the cap, crop a smaller box.
+**GIF size limit** keeps the saved file at or under **1 MB**, **2 MB**, or **5 MB** (default **5 MB**). **No limit** (last in the list) keeps every frame. Without **Optimize GIF**, each prefix encodes while you record and capture **stops** when the next frame would pass the cap. With **Optimize GIF** on, capture uses your **Frames** count; the cap applies to the re-encoded file and extra frames drop from the end. Use **1 MB** for Steam Workshop thumbnails. If even two frames are over the cap, crop a smaller box.
 
-**Screenshot** and **Record GIF** both use a locked capture area when one is set; otherwise they use the live **C** selection. **Record GIF** waits for the **Countdown**, then captures one frame per sim tick. With **Step sim** off, the sim keeps running. With **Step sim** on, the sim pauses on each painted frame. Use **Capture area** to pin the crop from your current **C** selection — you can clear select and keep building while the panel stays open and the orange outline shows. After each frame the GIF encodes so recording can stop at the size cap. Set **PNG upscale** / **GIF upscale** under **Options → Mods** (default 2×). Overlay text is drawn after upscale. The file downloads. The row shows the countdown, then **Recording…**. The button is **Cancel** in all of those cases.
+**Screenshot** and **Record GIF** both use a locked capture area when one is set; otherwise they use the live **C** selection. **Record GIF** waits for the **Countdown**, then captures one frame per sim tick. With **Step sim** off, the sim keeps running. With **Step sim** on, the sim pauses on each painted frame. Use **Capture area** to pin the crop from your current **C** selection — you can clear select and keep building while the panel stays open and the orange outline shows. Without **Optimize GIF**, each frame encodes while you record so capture can stop at the size cap. With **Optimize GIF** on, re-encode runs after capture and the size cap applies to that file. Set **PNG upscale** / **GIF upscale** under **Options → Mods** (default 2×). Overlay text is drawn after upscale. The file downloads. The row shows the countdown, then **Recording…**. The button is **Cancel** in all of those cases.
 
 **Record GIF** exits **C** select mode when recording starts (clears the selection and restores the normal cursor) so you can keep building. The crop stays the box you selected. Select mode is not restored when the GIF finishes.
 

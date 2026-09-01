@@ -22,9 +22,10 @@ Set keys for Screenshot and Record GIF in Options → Controls. The panel shows 
 - Greenscreen (#00FF00) for chroma key
 - Show mouse — draw the in-game cursor when it is inside the selection
 - **Step sim** — optional pause-and-step GIF capture (off by default; the sim keeps running)
+- **Optimize GIF** — optional re-encode after capture (shared palette and cropped frame diffs; off by default)
 - **GIF countdown** (0–10 s) under Options → Mods before Record GIF starts
 - **Capture area** lock — pin the crop for screenshot and GIF; clear C select and keep playing
-- Optional 1 MB, 2 MB, 5 MB, or No limit GIF size cap (default 5 MB). Recording stops at the cap. No limit keeps every frame.
+- Optional 1 MB, 2 MB, 5 MB, or No limit GIF size cap (default 5 MB). The saved GIF stays at or under the cap. With Optimize GIF on, the cap applies after re-encode. No limit keeps every frame.
 - **Overlay** — simple caption (text, font size, align) or advanced HTML/CSS with live preview in the capture box
 - Orange crop preview for live C select, locked capture area, and countdown; red while recording; blue while encoding
 - Panel settings saved between sessions

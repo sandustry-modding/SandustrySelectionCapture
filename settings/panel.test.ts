@@ -52,6 +52,7 @@ test("normalizeCaptureSettings clamps invalid values", () => {
       greenscreen: true,
       showMouse: false,
       stepSimulation: false,
+      optimizeGif: false,
       gifSizeLimit: "5mb",
       lockedGifBounds: null,
       overlay: {
@@ -136,6 +137,7 @@ test("saveCaptureSettings and loadCaptureSettings round-trip", () => {
     greenscreen: true,
     showMouse: true,
     stepSimulation: true,
+    optimizeGif: true,
     gifSizeLimit: "2mb" as const,
     lockedGifBounds: { minX: 0, minY: 0, maxX: 3, maxY: 3 },
     overlay: {

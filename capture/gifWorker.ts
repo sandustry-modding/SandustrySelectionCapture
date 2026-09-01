@@ -6,6 +6,7 @@ type StartMessage = {
   height: number;
   delay: number;
   maxBytes: number;
+  optimize?: boolean;
 };
 
 type FrameMessage = {
@@ -36,6 +37,7 @@ self.onmessage = (event: MessageEvent<WorkerIn>) => {
         height: msg.height,
         delay: msg.delay,
         maxBytes: msg.maxBytes,
+        optimize: msg.optimize === true,
       });
       reply({ type: "started" });
       return;

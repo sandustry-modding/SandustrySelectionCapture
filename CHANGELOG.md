@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added: **Optimize GIF** — after capture, re-encode with a shared palette and cropped frame diffs (only pixels that changed). The GIF size cap applies to that re-encoded file.
 - Added: **Step sim** — off keeps the sim running (default); on pauses and steps one tick per GIF frame.
 - Changed: PNG upscale and GIF upscale default to 2×.
 - Removed: **Ticks / frame** panel option. Record GIF captures one sim tick per frame.

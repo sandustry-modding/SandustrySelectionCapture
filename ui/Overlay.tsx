@@ -142,6 +142,7 @@ export function Overlay() {
     greenscreen,
     showMouse,
     stepSimulation,
+    optimizeGif,
     gifSizeLimit,
     lockedGifBounds,
     overlay,
@@ -244,6 +245,7 @@ export function Overlay() {
           signal: abort.signal,
           overlay,
           stepSimulation,
+          optimizeGif,
           onEncodeStart: () => setPhase("encoding"),
         });
         const sizeLabel = gifSizeLimitLabel(gifSizeLimit);
@@ -403,9 +405,16 @@ export function Overlay() {
                 onChange={(checked) => patchSettings({ stepSimulation: checked })}
               />
             </OptionsRow>
+            <OptionsRow label="Optimize GIF">
+              <OptionsSwitch
+                checked={optimizeGif}
+                disabled={busy}
+                onChange={(checked) => patchSettings({ optimizeGif: checked })}
+              />
+            </OptionsRow>
             <OptionsRow
               label="GIF size limit"
-              description="Recording stops at this size. No limit records every frame."
+              description="The saved GIF stays at or under this size. No limit records every frame."
             >
               <OptionsSelect
                 value={gifSizeLimit}

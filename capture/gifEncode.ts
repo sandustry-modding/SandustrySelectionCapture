@@ -76,6 +76,7 @@ export async function openGifEncodeSession(options: {
   height: number;
   delay: number;
   maxBytes: number;
+  optimize?: boolean;
   signal?: AbortSignal;
 }): Promise<GifEncodeSession> {
   throwIfAborted(options.signal);
@@ -87,6 +88,7 @@ export async function openGifEncodeSession(options: {
     height: options.height,
     delay: options.delay,
     maxBytes: options.maxBytes,
+    optimize: options.optimize === true,
   });
   const reply = await started;
   if (reply.type !== "started") {

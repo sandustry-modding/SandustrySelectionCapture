@@ -21,6 +21,7 @@ export type RecordGifHookArgs = {
   greenscreen?: boolean;
   abortImmediately?: boolean;
   stepSimulation?: boolean;
+  optimizeGif?: boolean;
 };
 
 export type RecordGifHookOutcome = RecordGifOutcome & {
@@ -85,6 +86,7 @@ export function installSelectionCaptureTestHook(): void {
           signal: abort.signal,
           overlay: { ...DEFAULT_CAPTURE_OVERLAY },
           stepSimulation: args.stepSimulation === true,
+          optimizeGif: args.optimizeGif === true,
           download: false,
         }),
       );

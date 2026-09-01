@@ -79,6 +79,8 @@ export type CaptureSettings = {
   showMouse: boolean;
   /** Pause the sim on each GIF frame and step one tick between captures. */
   stepSimulation: boolean;
+  /** After capture, re-encode with a shared palette and cropped frame diffs. */
+  optimizeGif: boolean;
   gifSizeLimit: GifSizeLimit;
   /** Locked GIF crop from the last Lock GIF area action. */
   lockedGifBounds: CellBounds | null;
@@ -91,6 +93,7 @@ export const DEFAULT_CAPTURE_SETTINGS: CaptureSettings = {
   greenscreen: false,
   showMouse: false,
   stepSimulation: false,
+  optimizeGif: false,
   gifSizeLimit: "5mb",
   lockedGifBounds: null,
   overlay: { ...DEFAULT_CAPTURE_OVERLAY },
@@ -177,6 +180,7 @@ export function normalizeCaptureSettings(
     greenscreen: clampBool(raw.greenscreen, base.greenscreen),
     showMouse: clampBool(raw.showMouse, base.showMouse),
     stepSimulation: clampBool(raw.stepSimulation, base.stepSimulation),
+    optimizeGif: clampBool(raw.optimizeGif, base.optimizeGif),
     gifSizeLimit: normalizeGifSizeLimit(raw),
     lockedGifBounds: normalizeCellBounds(raw.lockedGifBounds),
     overlay: normalizeCaptureOverlay(raw.overlay),

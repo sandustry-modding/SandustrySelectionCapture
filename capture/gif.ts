@@ -39,6 +39,8 @@ export type RecordGifOptions = {
   overlay?: CaptureOverlaySettings;
   /** Pause the sim on each painted frame and step one tick between captures. */
   stepSimulation?: boolean;
+  /** After capture, re-encode with a shared palette and cropped frame diffs. */
+  optimizeGif?: boolean;
   /** When false, skip the file download (tests). Default true. */
   download?: boolean;
 };
@@ -143,6 +145,7 @@ export async function recordSelectionGifOutcome(
     showMouse: look.showMouse,
     gifSizeLimit: options.gifSizeLimit,
     stepSimulation: step,
+    optimizeGif: options.optimizeGif === true,
   });
 
   const overlay = options.overlay;
@@ -181,6 +184,7 @@ export async function recordSelectionGifOutcome(
             height: frame.height,
             delay: delayMs,
             maxBytes,
+            optimize: options.optimizeGif === true,
             signal: options.signal,
           });
         }
