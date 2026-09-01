@@ -13,7 +13,11 @@ import {
 } from "@modkit/ui";
 import { captureSelectionPng } from "../capture/png";
 import { hideAdvancedOverlayDomPreview } from "../overlay/advanced";
-import { installCaptureAreaPreview, type CapturePreviewState } from "../preview/crop";
+import {
+  hideCaptureOutlineDom,
+  installCaptureAreaPreview,
+  type CapturePreviewState,
+} from "../preview/crop";
 import { FloatingWindow } from "./FloatingWindow";
 import {
   GIF_SIZE_LIMIT_OPTIONS,
@@ -246,6 +250,7 @@ export function Overlay() {
           scale: gifScale,
           signal: abort.signal,
           overlay,
+          onEncodeStart: () => setPhase("encoding"),
         });
         const sizeLabel = gifSizeLimitLabel(gifSizeLimit);
         switch (result) {
@@ -317,6 +322,7 @@ export function Overlay() {
   useEffect(() => {
     if (!open) {
       hideAdvancedOverlayDomPreview();
+      hideCaptureOutlineDom();
       return;
     }
     // Keep one subscription for the open panel so phase changes do not tear down
@@ -414,12 +420,15 @@ export function Overlay() {
                 onChange={(checked) => patchSettings({ showMouse: checked })}
               />
             </OptionsRow>
-            <OptionsRow label="GIF size limit" description="Recording stops at this size.">
+            <OptionsRow
+              label="GIF size limit"
+              description="Recording stops at this size. No limit records every frame."
+            >
               <OptionsSelect
                 value={gifSizeLimit}
                 options={GIF_SIZE_LIMIT_OPTIONS}
                 disabled={busy}
-                className="min-w-28"
+                className="min-w-32"
                 onChange={(value: GifSizeLimit) => patchSettings({ gifSizeLimit: value })}
               />
             </OptionsRow>

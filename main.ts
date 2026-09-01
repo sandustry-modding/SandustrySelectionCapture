@@ -2,6 +2,7 @@ import { safe } from "@modkit/utils";
 import { modinfo } from "./modinfo";
 import { Overlay } from "./ui/Overlay";
 import tailwindCss from "@modkit/ui/tailwind.css";
+import { installSelectionCaptureTestHook } from "./hook";
 
 const api = sandkit.api;
 const OVERLAY_ID = "selection-capture";
@@ -25,6 +26,7 @@ function registerUi() {
 safe(() => {
   installStyles();
   registerUi();
+  installSelectionCaptureTestHook();
 });
 
 console.log("loaded");

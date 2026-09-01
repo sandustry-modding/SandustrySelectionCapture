@@ -17,6 +17,9 @@ export type SessionPixi = {
     marquee?: string;
     demolish?: string;
   };
+  dynamic2D?: {
+    context?: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+  };
   mountainsSprite?: VisibleNode;
   treesSmallSprite?: VisibleNode;
   treesSprite?: VisibleNode;
@@ -26,11 +29,14 @@ export type SessionPixi = {
   toggleSkyFilter?: (enabled: boolean) => void;
 };
 
+type SessionImage = { image?: HTMLImageElement | CanvasImageSource };
+
 export type SessionRendering = {
   canvas?: HTMLCanvasElement;
   overlayCanvas?: HTMLCanvasElement;
   overlayContext?: CanvasRenderingContext2D;
   pixi?: SessionPixi;
+  images?: Record<string, SessionImage | undefined>;
 };
 
 export type SessionShape = {
@@ -59,4 +65,10 @@ export function getOverlayCanvas(): HTMLCanvasElement | null {
   const overlay = getSession()?.rendering?.overlayCanvas;
   if (!overlay || overlay.width <= 0 || overlay.height <= 0) return null;
   return overlay;
+}
+
+export function getDynamic2DCanvas(): HTMLCanvasElement | OffscreenCanvas | null {
+  const context = getSession()?.rendering?.pixi?.dynamic2D?.context;
+  const canvas = context?.canvas;
+  return canvas ?? null;
 }

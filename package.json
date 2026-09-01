@@ -2,5 +2,7 @@
   "name": "selection-capture",
   "private": true,
   "type": "module",
-  "dependencies": {}
+  "dependencies": {
+    "gifenc": "^1.0.3"
+  }
 }

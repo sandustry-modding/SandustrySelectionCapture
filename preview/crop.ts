@@ -1,8 +1,4 @@
-import {
-  expandScreenRectOutlineOutward,
-  getSelectionScreenRect,
-  type ScreenRect,
-} from "../selection/screenRect";
+import { getSelectionScreenRect, screenRectToViewportRect } from "../selection/screenRect";
 import { hideAdvancedOverlayDomPreview, syncAdvancedOverlayDomPreview } from "../overlay/advanced";
 import { drawSimpleOverlayInScreenRect } from "../overlay/simple";
 import type { CaptureOverlaySettings } from "../settings/panel";
@@ -12,12 +8,21 @@ import {
   type CellBounds,
   type SelectionBoundsOptions,
 } from "../selection/bounds";
+import { modinfo } from "../modinfo";
 
 const PREVIEW_OUTLINE_IDLE = "rgba(255, 165, 0, 0.85)";
 const PREVIEW_OUTLINE_RECORDING = "rgba(255, 0, 0, 0.75)";
 const PREVIEW_OUTLINE_ENCODING = "rgba(0, 120, 255, 0.75)";
 
 const PREVIEW_OUTLINE_WIDTH = 3;
+const OUTLINE_HOST_ID = `${modinfo.id}:crop-outline`;
+
+let previewOverlayPaint = true;
+
+/** Hide simple overlay text on overlayCanvas for one paint so capture can copy clean pixels. */
+export function setCapturePreviewOverlayPaint(enabled: boolean): void {
+  previewOverlayPaint = enabled;
+}
 
 export type CapturePreviewOutline = "idle" | "recording" | "encoding";
 
@@ -30,35 +35,72 @@ export type CapturePreviewState = SelectionBoundsOptions & {
   overlay?: CaptureOverlaySettings;
 };
 
-function strokePreviewRect(
-  ctx: CanvasRenderingContext2D,
-  rect: ScreenRect,
-  color: string,
-  lineWidth: number,
-): void {
-  const outline = expandScreenRectOutlineOutward(rect, lineWidth);
-  const { x, y, width, height } = outline;
-  if (width <= 0 || height <= 0) return;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + width, y);
-  ctx.lineTo(x + width, y + height);
-  ctx.lineTo(x, y + height);
-  ctx.closePath();
-  ctx.strokeStyle = color;
-  ctx.stroke();
+type OutlineBox = {
+  bounds: CellBounds;
+  color: string;
+};
+
+function frozenOutlineColor(outline: CapturePreviewOutline): string {
+  if (outline === "recording") return PREVIEW_OUTLINE_RECORDING;
+  if (outline === "encoding") return PREVIEW_OUTLINE_ENCODING;
+  return PREVIEW_OUTLINE_IDLE;
 }
 
-function strokeBounds(
-  ctx: CanvasRenderingContext2D,
-  api: SandkitApi,
-  bounds: CellBounds,
-  color: string,
-  lineWidth: number,
-): void {
-  const rect = getSelectionScreenRect(api, bounds);
-  if (!rect) return;
-  strokePreviewRect(ctx, rect, color, lineWidth);
+function getOutlineHost(): HTMLDivElement {
+  let host = document.getElementById(OUTLINE_HOST_ID) as HTMLDivElement | null;
+  if (!host) {
+    host = document.createElement("div");
+    host.id = OUTLINE_HOST_ID;
+    host.style.position = "fixed";
+    host.style.inset = "0";
+    host.style.pointerEvents = "none";
+    host.style.zIndex = "9999";
+    document.body.appendChild(host);
+  }
+  return host;
+}
+
+export function hideCaptureOutlineDom(): void {
+  const host = document.getElementById(OUTLINE_HOST_ID);
+  if (host) host.style.display = "none";
+}
+
+function syncCaptureOutlineDom(api: SandkitApi, boxes: OutlineBox[]): void {
+  const viewports: Array<{ x: number; y: number; width: number; height: number; color: string }> =
+    [];
+  for (const box of boxes) {
+    const rect = getSelectionScreenRect(api, box.bounds);
+    if (!rect) continue;
+    const viewport = screenRectToViewportRect(rect);
+    if (!viewport || viewport.width <= 0 || viewport.height <= 0) continue;
+    viewports.push({ ...viewport, color: box.color });
+  }
+
+  if (viewports.length === 0) {
+    hideCaptureOutlineDom();
+    return;
+  }
+
+  const host = getOutlineHost();
+  host.style.display = "block";
+  while (host.children.length > viewports.length) host.lastElementChild?.remove();
+  while (host.children.length < viewports.length) {
+    const el = document.createElement("div");
+    el.style.position = "fixed";
+    el.style.pointerEvents = "none";
+    el.style.boxSizing = "border-box";
+    host.appendChild(el);
+  }
+
+  for (let i = 0; i < viewports.length; i++) {
+    const viewport = viewports[i]!;
+    const el = host.children[i] as HTMLDivElement;
+    el.style.left = `${viewport.x}px`;
+    el.style.top = `${viewport.y}px`;
+    el.style.width = `${viewport.width}px`;
+    el.style.height = `${viewport.height}px`;
+    el.style.outline = `${PREVIEW_OUTLINE_WIDTH}px solid ${viewport.color}`;
+  }
 }
 
 /** Draw crop outlines: locked GIF area, live C selection, and active recording crop. */
@@ -80,29 +122,24 @@ export function installCaptureAreaPreview(readState: () => CapturePreviewState):
       hideAdvancedOverlayDomPreview();
     }
 
+    const boxes: OutlineBox[] = [];
+    if (gifBounds) {
+      boxes.push({
+        bounds: gifBounds,
+        color: state.frozenBounds ? frozenOutlineColor(outline) : PREVIEW_OUTLINE_IDLE,
+      });
+    }
+    if (liveBounds && (!gifBounds || !cellBoundsEqual(liveBounds, gifBounds))) {
+      boxes.push({ bounds: liveBounds, color: PREVIEW_OUTLINE_IDLE });
+    }
+    syncCaptureOutlineDom(api, boxes);
+
+    if (!previewOverlayPaint) return;
+    if (!previewRect || !overlay?.enabled || overlay.advanced) return;
+
     api.rendering.withOverlayContext((ctx) => {
       ctx.save();
-      ctx.setLineDash([]);
-      ctx.lineWidth = PREVIEW_OUTLINE_WIDTH;
-
-      if (gifBounds) {
-        const color =
-          state.frozenBounds && outline === "recording"
-            ? PREVIEW_OUTLINE_RECORDING
-            : state.frozenBounds && outline === "encoding"
-              ? PREVIEW_OUTLINE_ENCODING
-              : PREVIEW_OUTLINE_IDLE;
-        strokeBounds(ctx, api, gifBounds, color, PREVIEW_OUTLINE_WIDTH);
-      }
-
-      if (liveBounds && (!gifBounds || !cellBoundsEqual(liveBounds, gifBounds))) {
-        strokeBounds(ctx, api, liveBounds, PREVIEW_OUTLINE_IDLE, PREVIEW_OUTLINE_WIDTH);
-      }
-
-      if (previewRect && overlay?.enabled && !overlay.advanced) {
-        drawSimpleOverlayInScreenRect(ctx, overlay, previewRect);
-      }
-
+      drawSimpleOverlayInScreenRect(ctx, overlay, previewRect);
       ctx.restore();
     });
   });
@@ -110,5 +147,6 @@ export function installCaptureAreaPreview(readState: () => CapturePreviewState):
   return () => {
     unsubscribe();
     hideAdvancedOverlayDomPreview();
+    hideCaptureOutlineDom();
   };
 }

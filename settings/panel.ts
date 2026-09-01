@@ -6,7 +6,7 @@ const MIN_BLOCK_PADDING = -32;
 const MAX_BLOCK_PADDING = 32;
 const DEFAULT_BLOCK_PADDING = 1;
 
-const MIB = 1024 * 1024;
+const MB = 1000 * 1000;
 
 function clampBlockPadding(value: number): number {
   return Math.min(MAX_BLOCK_PADDING, Math.max(MIN_BLOCK_PADDING, Math.round(value)));
@@ -16,8 +16,8 @@ const MIN_FRAMES = 2;
 const MIN_TICKS = 1;
 const MAX_TICKS = 30;
 
-/** Cap for encoded GIF size. Recording stops when the file would pass this cap. */
-export type GifSizeLimit = "1mb" | "2mb" | "5mb";
+/** Cap for encoded GIF size. `"none"` records every frame. */
+export type GifSizeLimit = "1mb" | "2mb" | "5mb" | "none";
 
 export type CaptureOverlaySettings = {
   enabled: boolean;
@@ -101,6 +101,7 @@ export const GIF_SIZE_LIMIT_OPTIONS: { value: GifSizeLimit; label: string }[] = 
   { value: "1mb", label: "1 MB" },
   { value: "2mb", label: "2 MB" },
   { value: "5mb", label: "5 MB" },
+  { value: "none", label: "No limit" },
 ];
 
 function clampInt(value: unknown, min: number, max: number, fallback: number): number {
@@ -120,7 +121,7 @@ function clampBool(value: unknown, fallback: boolean): boolean {
 }
 
 function isGifSizeLimit(value: unknown): value is GifSizeLimit {
-  return value === "1mb" || value === "2mb" || value === "5mb";
+  return value === "1mb" || value === "2mb" || value === "5mb" || value === "none";
 }
 
 function normalizeCellBounds(raw: unknown): CellBounds | null {
@@ -132,39 +133,42 @@ function normalizeCellBounds(raw: unknown): CellBounds | null {
   return { minX: minX!, minY: minY!, maxX: maxX!, maxY: maxY! };
 }
 
-/** Bytes for encode. Always a cap — there is no unlimited option. */
+/** Bytes for encode. `"none"` is `Number.MAX_SAFE_INTEGER` (no practical cap). 1 MB is 1,000,000 bytes. */
 export function gifSizeLimitBytes(limit: GifSizeLimit): number {
   switch (limit) {
     case "1mb":
-      return MIB;
+      return MB;
     case "2mb":
-      return 2 * MIB;
-    default:
-      return 5 * MIB;
+      return 2 * MB;
+    case "5mb":
+      return 5 * MB;
+    case "none":
+      return Number.MAX_SAFE_INTEGER;
   }
 }
 
-/** Short label for toasts (`1 MB`, `5 MB`). */
+/** Short label for toasts (`1 MB`, `No limit`). */
 export function gifSizeLimitLabel(limit: GifSizeLimit): string {
   switch (limit) {
     case "1mb":
       return "1 MB";
     case "2mb":
       return "2 MB";
-    default:
+    case "5mb":
       return "5 MB";
+    case "none":
+      return "No limit";
   }
 }
 
 type StoredCaptureSettings = Omit<Partial<CaptureSettings>, "gifSizeLimit"> & {
-  gifSizeLimit?: GifSizeLimit | "none";
+  gifSizeLimit?: GifSizeLimit;
   /** Pre-0.4.2 boolean. Maps to `gifSizeLimit: "1mb"` when true. */
   limit1Mb?: boolean;
 };
 
 function normalizeGifSizeLimit(raw: StoredCaptureSettings): GifSizeLimit {
   if (isGifSizeLimit(raw.gifSizeLimit)) return raw.gifSizeLimit;
-  if (raw.gifSizeLimit === "none") return "5mb";
   if (raw.limit1Mb === true) return "1mb";
   return DEFAULT_CAPTURE_SETTINGS.gifSizeLimit;
 }

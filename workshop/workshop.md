@@ -23,7 +23,7 @@ Set keys for Screenshot and Record GIF in Options → Controls. The panel shows 
 - Show mouse — draw the in-game cursor when it is inside the selection
 - **GIF countdown** (0–10 s) under Options → Mods before Record GIF starts
 - **Capture area** lock — pin the crop for screenshot and GIF; clear C select and keep playing
-- Optional 1 MB, 2 MB, or 5 MB GIF size cap (default 5 MB). Recording stops at the cap.
+- Optional 1 MB, 2 MB, 5 MB, or No limit GIF size cap (default 5 MB). Recording stops at the cap. No limit keeps every frame.
 - **Overlay** — simple caption (text, font size, align) or advanced HTML/CSS with live preview in the capture box
 - Orange crop preview for live C select, locked capture area, and countdown; red while recording; blue while encoding
 - Panel settings saved between sessions

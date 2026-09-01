@@ -15,7 +15,7 @@ Floating overlay (not a Debug tab). A11y title **Screenshot and GIF recorder** (
 | Block padding  | −32–32 cell margin, default **1**                                                  |
 | Greenscreen    | toggle                                                                             |
 | Show mouse     | toggle (default **off**)                                                           |
-| GIF size limit | **1 MB** / **2 MB** / **5 MB**, default **5 MB**. Recording stops at the cap       |
+| GIF size limit | **1 MB** / **2 MB** / **5 MB** / **No limit**, default **5 MB**. Cap options stop recording at that size |
 | Overlay        | optional caption (simple text or advanced HTML/CSS)                                |
 | Capture area   | **Lock** / **Clear** locked crop                                                   |
 | Record GIF     | button; rebind under Options → Controls (category **Screenshot and GIF recorder**) |

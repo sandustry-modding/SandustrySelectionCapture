@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import {
   DEFAULT_CAPTURE_SETTINGS,
+  GIF_SIZE_LIMIT_OPTIONS,
   gifSizeLimitBytes,
   gifSizeLimitLabel,
   loadCaptureSettings,
@@ -85,17 +86,27 @@ test("normalizeCaptureSettings maps legacy limit1Mb true to 1mb", () => {
   );
 });
 
-test("normalizeCaptureSettings maps legacy none to 5mb", () => {
-  assert.equal(normalizeCaptureSettings({ gifSizeLimit: "none" }).gifSizeLimit, "5mb");
+test("normalizeCaptureSettings keeps none as no limit", () => {
+  assert.equal(normalizeCaptureSettings({ gifSizeLimit: "none" }).gifSizeLimit, "none");
+});
+
+test("GIF_SIZE_LIMIT_OPTIONS lists No limit last", () => {
+  assert.deepEqual(
+    GIF_SIZE_LIMIT_OPTIONS.map((option) => option.value),
+    ["1mb", "2mb", "5mb", "none"],
+  );
+  assert.equal(GIF_SIZE_LIMIT_OPTIONS.at(-1)?.label, "No limit");
 });
 
 test("gifSizeLimitBytes and gifSizeLimitLabel cover each option", () => {
-  assert.equal(gifSizeLimitBytes("1mb"), 1024 * 1024);
-  assert.equal(gifSizeLimitBytes("2mb"), 2 * 1024 * 1024);
-  assert.equal(gifSizeLimitBytes("5mb"), 5 * 1024 * 1024);
+  assert.equal(gifSizeLimitBytes("1mb"), 1_000_000);
+  assert.equal(gifSizeLimitBytes("2mb"), 2_000_000);
+  assert.equal(gifSizeLimitBytes("5mb"), 5_000_000);
+  assert.equal(gifSizeLimitBytes("none"), Number.MAX_SAFE_INTEGER);
   assert.equal(gifSizeLimitLabel("1mb"), "1 MB");
   assert.equal(gifSizeLimitLabel("2mb"), "2 MB");
   assert.equal(gifSizeLimitLabel("5mb"), "5 MB");
+  assert.equal(gifSizeLimitLabel("none"), "No limit");
 });
 
 test("normalizeCaptureOverlay clamps vertical align and fills defaults", () => {

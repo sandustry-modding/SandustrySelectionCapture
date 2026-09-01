@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-- Removed: canvas readback PNG/GIF capture (too slow). Panel, overlay preview, and settings stay; fill in `capture/grab.ts` for the new path.
+- Changed: Record GIF encodes each frame while you record, then stops at the size cap. Encoding no longer waits until every frame is stored.
+- Added: GIF size limit includes **No limit** as the last option. Record GIF then keeps every frame.
+- Fixed: Screenshot and Record GIF capture the selection again (PNG copy/download and GIF download).
+- Fixed: the red recording outline (and blue encoding outline) show on the selection while a GIF records.
+- Fixed: GIF size caps use 1,000,000 bytes per MB, so a **5 MB** GIF stays at or under 5,000,000 bytes.
 
 ## 0.7.0
 
