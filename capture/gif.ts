@@ -189,19 +189,26 @@ export async function recordSelectionGifOutcome(
           });
         }
 
-        const wait =
+        // Overlap tick wait with encode; absorb wait if encode throws or hits the size cap.
+        const tickWait =
           i < framesWanted - 1 ? waitTick(api, options.signal, { step }) : Promise.resolve();
-        const added = await session.addFrame(rgba, options.signal);
-        if (!added.accepted) {
-          hitLimit = true;
-          break;
+        try {
+          const added = await session.addFrame(rgba, options.signal);
+          if (!added.accepted) {
+            hitLimit = true;
+            await tickWait.catch(() => {});
+            break;
+          }
+          acceptedFrames = added.frameCount;
+          if (i === 0 || i % 10 === 0) {
+            console.log(`captured frame ${i + 1}/${framesWanted}`);
+          }
+          await tickWait;
+          throwIfAborted(options.signal);
+        } catch (error) {
+          await tickWait.catch(() => {});
+          throw error;
         }
-        acceptedFrames = added.frameCount;
-        if (i === 0 || i % 10 === 0) {
-          console.log(`captured frame ${i + 1}/${framesWanted}`);
-        }
-        await wait;
-        throwIfAborted(options.signal);
       }
     } finally {
       if (advanced) endOverlayRecording();

@@ -1,4 +1,4 @@
-import { getSession } from "../game/session";
+import { getSession } from "../game/session.ts";
 
 /**
  * WorkerMessage.SetPaused in the current game bundle (`dist/js/bundle.js`).
@@ -28,6 +28,11 @@ export function setSimulationPaused(paused: boolean): void {
   }
 }
 
+/**
+ * Wait for the next sim tick. Abort resolves (does not reject) so a tick wait
+ * started in parallel with encode cannot throw an uncaught AbortError.
+ * Callers must use `throwIfAborted` after await when cancel should stop the flow.
+ */
 export function waitTick(
   api: SandkitApi,
   signal: AbortSignal | undefined,
@@ -35,27 +40,38 @@ export function waitTick(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
-      reject(new DOMException("Aborted", "AbortError"));
+      resolve();
       return;
     }
 
     const step = options?.step === true;
     const timeoutId = setTimeout(() => {
+      cleanup();
       if (step) setSimulationPaused(true);
       reject(new Error("tick wait timed out"));
     }, 15_000);
 
-    const onAbort = () => {
+    const cleanup = () => {
       clearTimeout(timeoutId);
-      reject(new DOMException("Aborted", "AbortError"));
+      signal?.removeEventListener("abort", onAbort);
+    };
+
+    const onAbort = () => {
+      cleanup();
+      if (step) setSimulationPaused(true);
+      resolve();
     };
     signal?.addEventListener("abort", onAbort, { once: true });
 
     if (step) setSimulationPaused(false);
     api.schedule.nextTick(() => {
-      if (signal?.aborted) return;
-      clearTimeout(timeoutId);
-      signal?.removeEventListener("abort", onAbort);
+      if (signal?.aborted) {
+        cleanup();
+        if (step) setSimulationPaused(true);
+        resolve();
+        return;
+      }
+      cleanup();
       if (step) setSimulationPaused(true);
       resolve();
     });
@@ -67,5 +83,7 @@ export function throwIfAborted(signal: AbortSignal | undefined): void {
 }
 
 export function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
+  return (
+    (error instanceof DOMException || error instanceof Error) && error.name === "AbortError"
+  );
 }

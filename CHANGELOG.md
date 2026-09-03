@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed: Cancel during Record GIF no longer logs an uncaught `AbortError` from the tick wait.
+
 ## 0.8.0
 
 - Changed: Record GIF keeps the sim running. Falling sand and machines keep moving while you record.
