@@ -82,7 +82,7 @@ export type CaptureSettings = {
   /** After capture, re-encode with a shared palette and cropped frame diffs. */
   optimizeGif: boolean;
   gifSizeLimit: GifSizeLimit;
-  /** Locked GIF crop from the last Lock GIF area action. */
+  /** Locked capture core (no block padding). Padding applies live while locked. */
   lockedGifBounds: CellBounds | null;
   overlay: CaptureOverlaySettings;
 };

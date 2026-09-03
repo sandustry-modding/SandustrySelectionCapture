@@ -12,7 +12,7 @@ import {
   OverlayRoot,
 } from "@modkit/ui";
 import { captureSelectionPng } from "../capture/png";
-import { hideAdvancedOverlayDomPreview } from "../overlay/advanced";
+import { hideOverlayDomPreview } from "../overlay/advanced";
 import {
   hideCaptureOutlineDom,
   installCaptureAreaPreview,
@@ -317,7 +317,7 @@ export function Overlay() {
 
   useEffect(() => {
     if (!open) {
-      hideAdvancedOverlayDomPreview();
+      hideOverlayDomPreview();
       hideCaptureOutlineDom();
       return;
     }
@@ -329,7 +329,8 @@ export function Overlay() {
   function lockGifArea() {
     if (busy) return;
     const api = sandkit.api;
-    const bounds = getSelectionCellBounds(api, { blockPadding });
+    // Store the unpadded core so Block padding can resize the outline and crop live.
+    const bounds = getSelectionCellBounds(api, { blockPadding: 0 });
     if (!bounds) {
       api.ui.toast("No marquee selection — press C, drag, then Lock capture area", {});
       return;

@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Fixed: Cancel during Record GIF no longer logs an uncaught `AbortError` from the tick wait.
+- Fixed: changing **Block padding** while a capture area is locked updates the orange outline and crop preview live (and the next PNG/GIF crop).
+- Fixed: simple overlay caption no longer flickers in the live preview while Record GIF grabs frames.
 
 ## 0.8.0
 

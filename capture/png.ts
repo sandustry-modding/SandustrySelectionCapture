@@ -14,7 +14,7 @@ import { captureDownloadFilename, downloadBlob } from "./download";
 import { setSimulationPaused } from "./sim";
 
 export type CapturePngOptions = SelectionBoundsOptions & {
-  /** Locked crop used when the C marquee is off. */
+  /** Locked capture core used when the C marquee is off. Block padding applies live. */
   lockedBounds?: CellBounds | null;
   /** When true, download a PNG file instead of copying to the clipboard. */
   download?: boolean;

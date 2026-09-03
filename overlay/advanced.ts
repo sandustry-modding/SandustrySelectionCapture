@@ -2,11 +2,12 @@ import { modinfo } from "../modinfo";
 import { rasterizeForeignHtml } from "./bake";
 import { buildAdvancedOverlayFrameHtml } from "./html";
 import type { CaptureOverlaySettings } from "../settings/panel";
+import { resolveOverlayInnerHtml } from "./simple";
 import { screenRectToViewportRect, type ScreenRect } from "../selection/screenRect";
 import { overlayRecordingTimeMs } from "./recording";
 import { snapshotOverlayRootHtml } from "./snapshot";
 
-const HOST_ID = `${modinfo.id}:advanced-overlay-preview`;
+const HOST_ID = `${modinfo.id}:overlay-preview`;
 
 let lastContentKey = "";
 let overlayRecording = false;
@@ -101,26 +102,27 @@ function syncRecordingOverlayPose(): void {
   }
 }
 
-/** Live advanced overlay preview with running CSS animations. */
-export function syncAdvancedOverlayDomPreview(
-  settings: CaptureOverlaySettings,
-  rect: ScreenRect,
-): void {
-  const html = settings.html.trim();
-  if (!settings.enabled || !settings.advanced || !html || rect.width <= 0 || rect.height <= 0) {
-    hideAdvancedOverlayDomPreview();
+/**
+ * Live overlay caption preview (simple text or advanced HTML).
+ * Uses a DOM layer so GIF grabs do not blank the on-screen preview.
+ */
+export function syncOverlayDomPreview(settings: CaptureOverlaySettings, rect: ScreenRect): void {
+  const innerHtml = resolveOverlayInnerHtml(settings);
+  if (!innerHtml || rect.width <= 0 || rect.height <= 0) {
+    hideOverlayDomPreview();
     return;
   }
 
   const viewport = screenRectToViewportRect(rect);
   if (!viewport) {
-    hideAdvancedOverlayDomPreview();
+    hideOverlayDomPreview();
     return;
   }
 
   const host = getHost();
   const frame = getFrame(host);
-  const contentKey = `${rect.width}x${rect.height}:${html}`;
+  const mode = settings.advanced ? "advanced" : "simple";
+  const contentKey = `${mode}:${rect.width}x${rect.height}:${innerHtml}`;
 
   host.style.display = "block";
   host.style.left = `${viewport.x}px`;
@@ -137,10 +139,10 @@ export function syncAdvancedOverlayDomPreview(
 
   if (contentKey !== lastContentKey) {
     lastContentKey = contentKey;
-    frame.innerHTML = buildAdvancedOverlayFrameHtml(html, rect.width, rect.height);
+    frame.innerHTML = buildAdvancedOverlayFrameHtml(innerHtml, rect.width, rect.height);
   }
 
-  if (isOverlayRecordingActive()) {
+  if (settings.advanced && isOverlayRecordingActive()) {
     syncRecordingOverlayPose();
   }
 }
@@ -160,8 +162,9 @@ export async function rasterizeLiveAdvancedOverlay(
   return rasterizeForeignHtml(html, cropWidth, cropHeight, outputWidth, outputHeight);
 }
 
-export function hideAdvancedOverlayDomPreview(): void {
+export function hideOverlayDomPreview(): void {
   lastContentKey = "";
   const host = document.getElementById(HOST_ID);
   if (host) host.style.display = "none";
 }
+

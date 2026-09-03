@@ -4,7 +4,6 @@ import {
   getOverlayCanvas,
   getSession,
 } from "../game/session";
-import { setCapturePreviewOverlayPaint } from "../preview/crop";
 import {
   clipRectToCanvas,
   getSelectionScreenRect,
@@ -244,12 +243,10 @@ export function grabSelectionFrame(
   return new Promise((resolve) => {
     let settled = false;
     let timeoutId = 0;
-    setCapturePreviewOverlayPaint(false);
     const finish = (result: GrabFrameResult) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeoutId);
-      setCapturePreviewOverlayPaint(true);
       resolve(result);
     };
     const unsubscribe = api.events.on("frame:render", () => {

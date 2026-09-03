@@ -1,10 +1,10 @@
 import { getSelectionScreenRect, screenRectToViewportRect } from "../selection/screenRect";
-import { hideAdvancedOverlayDomPreview, syncAdvancedOverlayDomPreview } from "../overlay/advanced";
-import { drawSimpleOverlayInScreenRect } from "../overlay/simple";
+import { hideOverlayDomPreview, syncOverlayDomPreview } from "../overlay/advanced";
 import type { CaptureOverlaySettings } from "../settings/panel";
 import {
   cellBoundsEqual,
   getSelectionCellBounds,
+  resolveCaptureBounds,
   type CellBounds,
   type SelectionBoundsOptions,
 } from "../selection/bounds";
@@ -17,20 +17,13 @@ const PREVIEW_OUTLINE_ENCODING = "rgba(0, 120, 255, 0.75)";
 const PREVIEW_OUTLINE_WIDTH = 3;
 const OUTLINE_HOST_ID = `${modinfo.id}:crop-outline`;
 
-let previewOverlayPaint = true;
-
-/** Hide simple overlay text on overlayCanvas for one paint so capture can copy clean pixels. */
-export function setCapturePreviewOverlayPaint(enabled: boolean): void {
-  previewOverlayPaint = enabled;
-}
-
 export type CapturePreviewOutline = "idle" | "recording" | "encoding";
 
 export type CapturePreviewState = SelectionBoundsOptions & {
   outline?: CapturePreviewOutline;
   /** Crop held while a GIF records (C select mode exits at record start). */
   frozenBounds?: CellBounds | null;
-  /** Locked GIF crop shown when idle. */
+  /** Locked GIF crop core (no block padding). Padding applies live while locked. */
   lockedGifBounds?: CellBounds | null;
   overlay?: CaptureOverlaySettings;
 };
@@ -109,17 +102,21 @@ export function installCaptureAreaPreview(readState: () => CapturePreviewState):
   const unsubscribe = api.events.on("frame:render", () => {
     const state = readState();
     const outline = state.outline ?? "idle";
-    const gifBounds = state.frozenBounds ?? state.lockedGifBounds ?? null;
+    // Frozen recording crop is already padded. Locked core gets live block padding.
+    const gifBounds =
+      state.frozenBounds ??
+      (state.lockedGifBounds ? resolveCaptureBounds(api, state.lockedGifBounds, state) : null);
     const liveBounds = getSelectionCellBounds(api, state);
     const previewBounds = gifBounds ?? liveBounds;
     const overlay = state.overlay;
     const previewRect =
       previewBounds && overlay?.enabled ? getSelectionScreenRect(api, previewBounds) : null;
 
-    if (previewRect && overlay?.enabled && overlay.advanced) {
-      syncAdvancedOverlayDomPreview(overlay, previewRect);
+    // DOM preview for simple and advanced — stays visible while grabs copy clean canvas pixels.
+    if (previewRect && overlay?.enabled) {
+      syncOverlayDomPreview(overlay, previewRect);
     } else {
-      hideAdvancedOverlayDomPreview();
+      hideOverlayDomPreview();
     }
 
     const boxes: OutlineBox[] = [];
@@ -133,20 +130,11 @@ export function installCaptureAreaPreview(readState: () => CapturePreviewState):
       boxes.push({ bounds: liveBounds, color: PREVIEW_OUTLINE_IDLE });
     }
     syncCaptureOutlineDom(api, boxes);
-
-    if (!previewOverlayPaint) return;
-    if (!previewRect || !overlay?.enabled || overlay.advanced) return;
-
-    api.rendering.withOverlayContext((ctx) => {
-      ctx.save();
-      drawSimpleOverlayInScreenRect(ctx, overlay, previewRect);
-      ctx.restore();
-    });
   });
 
   return () => {
     unsubscribe();
-    hideAdvancedOverlayDomPreview();
+    hideOverlayDomPreview();
     hideCaptureOutlineDom();
   };
 }

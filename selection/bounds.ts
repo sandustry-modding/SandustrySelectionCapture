@@ -45,6 +45,23 @@ function applyBlockPadding(bounds: CellBounds, paddingCells: number): CellBounds
   return insetBounds(bounds, -paddingCells);
 }
 
+/** Apply structure-block padding around a core cell AABB. */
+export function padCellBounds(
+  bounds: CellBounds,
+  blockPadding: number,
+  snap: number,
+): CellBounds {
+  return applyBlockPadding(bounds, blockPaddingToCells(blockPadding, snap));
+}
+
+function readSnapGridCellSize(api?: SandkitApi): number {
+  return (
+    api?.rendering.getGridMetrics().snapGridCellSize ||
+    sandkit.api.rendering.getGridMetrics().snapGridCellSize ||
+    4
+  );
+}
+
 /** Shape of `session.action.customData` while a marquee selection is active. */
 type MarqueeCustomData = {
   marqueeSelected?: boolean;
@@ -248,10 +265,7 @@ export function getSelectionCellBounds(
   const data = getMarqueeCustomData();
   if (!data?.marqueeSelected) return null;
 
-  const snap =
-    api?.rendering.getGridMetrics().snapGridCellSize ||
-    sandkit.api.rendering.getGridMetrics().snapGridCellSize ||
-    4;
+  const snap = readSnapGridCellSize(api);
 
   const structureBounds = data.selectedStructures?.length
     ? boundsFromStructures(data.selectedStructures, snap)
@@ -273,20 +287,25 @@ export function getSelectionCellBounds(
   if (!structureBounds) {
     core = tightenBoundsToMapData(core);
   }
-  const paddingCells = blockPaddingToCells(blockPadding, snap);
-  return applyBlockPadding(core, paddingCells);
+  return padCellBounds(core, blockPadding, snap);
 }
 
 export function cellBoundsEqual(a: CellBounds, b: CellBounds): boolean {
   return a.minX === b.minX && a.minY === b.minY && a.maxX === b.maxX && a.maxY === b.maxY;
 }
 
-/** Locked crop wins; otherwise read the live C marquee. */
+/**
+ * Locked core crop wins (block padding applied live); otherwise read the live C marquee.
+ * `locked` must be the unpadded core — the same AABB `getSelectionCellBounds` returns at padding 0.
+ */
 export function resolveCaptureBounds(
   api: SandkitApi,
   locked: CellBounds | null | undefined,
   options?: SelectionBoundsOptions,
 ): CellBounds | null {
-  if (locked) return locked;
+  if (locked) {
+    const blockPadding = clampBlockPadding(options?.blockPadding ?? DEFAULT_BLOCK_PADDING);
+    return padCellBounds(locked, blockPadding, readSnapGridCellSize(api));
+  }
   return getSelectionCellBounds(api, options);
 }

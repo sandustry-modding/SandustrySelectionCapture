@@ -1,5 +1,4 @@
 import type { CaptureOverlaySettings } from "../settings/panel";
-import type { ScreenRect } from "../selection/screenRect";
 
 function clampAlignPercent(value: number, fallback: number): number {
   if (!Number.isFinite(value)) return fallback;
@@ -121,31 +120,4 @@ export function drawSimpleOverlayText(
     ctx.fillText(line, textX, textY);
     textY += lineHeight;
   }
-}
-
-/** Draw simple caption on the overlay canvas. */
-export function drawSimpleOverlayInScreenRect(
-  ctx: CanvasRenderingContext2D,
-  settings: CaptureOverlaySettings,
-  rect: ScreenRect,
-): void {
-  if (!settings.enabled || settings.advanced) return;
-  const text = settings.text.trim();
-  if (!text || rect.width <= 0 || rect.height <= 0) return;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(rect.x, rect.y, rect.width, rect.height);
-  ctx.clip();
-  ctx.translate(rect.x, rect.y);
-  drawSimpleOverlayText(
-    ctx,
-    text,
-    settings.verticalAlign,
-    settings.horizontalAlign,
-    settings.fontSize,
-    rect.width,
-    rect.height,
-  );
-  ctx.restore();
 }

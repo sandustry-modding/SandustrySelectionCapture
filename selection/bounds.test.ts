@@ -299,6 +299,32 @@ test("resolveCaptureBounds prefers a locked crop over the live marquee", () => {
   assert.notDeepEqual(resolveCaptureBounds(api, null, { blockPadding: 0 }), locked);
 });
 
+test("resolveCaptureBounds applies live block padding to a locked core", () => {
+  const locked = { minX: 10, minY: 20, maxX: 12, maxY: 22 };
+  installSandkit({
+    action: {
+      customData: {
+        marqueeSelected: true,
+        start: { x: 0, y: 0 },
+        end: { x: 4, y: 4 },
+      },
+    },
+  });
+  const api = sandkit.api as SandkitApi;
+  assert.deepEqual(resolveCaptureBounds(api, locked, { blockPadding: 1 }), {
+    minX: 10 - SNAP,
+    minY: 20 - SNAP,
+    maxX: 12 + SNAP,
+    maxY: 22 + SNAP,
+  });
+  assert.deepEqual(resolveCaptureBounds(api, locked, { blockPadding: 2 }), {
+    minX: 10 - SNAP * 2,
+    minY: 20 - SNAP * 2,
+    maxX: 12 + SNAP * 2,
+    maxY: 22 + SNAP * 2,
+  });
+});
+
 test("resolveCaptureBounds falls back to the live marquee when nothing is locked", () => {
   installSandkit({
     action: {
