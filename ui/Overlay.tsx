@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  Button,
   HotkeyBadge,
   Interactive,
-  OptionsButton,
   OptionsNumberInput,
   OptionsRow,
   OptionsSection,
@@ -534,15 +534,15 @@ export function Overlay() {
           <OptionsSection title="Actions">
             <OptionsRow label="Capture area">
               <div className="flex items-center gap-2">
-                <OptionsButton disabled={busy} onClick={() => lockGifArea()}>
+                <Button disabled={busy} onClick={() => lockGifArea()}>
                   Lock
-                </OptionsButton>
-                <OptionsButton
+                </Button>
+                <Button
                   disabled={busy || !lockedGifBounds}
                   onClick={() => clearLockedGifArea()}
                 >
                   Clear
-                </OptionsButton>
+                </Button>
               </div>
             </OptionsRow>
             <OptionsRow
@@ -558,21 +558,21 @@ export function Overlay() {
             >
               <div className="flex items-center gap-2">
                 {!busy && recordGifKey ? <HotkeyBadge>{recordGifKey}</HotkeyBadge> : null}
-                <OptionsButton onClick={() => live.recordGif()}>
+                <Button onClick={() => live.recordGif()}>
                   {phase === "countdown" && countdownLeft !== null
                     ? String(countdownLeft)
                     : busy
                       ? "Cancel"
                       : "Record"}
-                </OptionsButton>
+                </Button>
               </div>
             </OptionsRow>
             <OptionsRow label="Screenshot">
               <div className="flex items-center gap-2">
                 {screenshotKey ? <HotkeyBadge>{screenshotKey}</HotkeyBadge> : null}
-                <OptionsButton disabled={busy} onClick={() => live.screenshot()}>
+                <Button disabled={busy} onClick={() => live.screenshot()}>
                   {downloadPng ? "Download PNG" : "Copy PNG"}
-                </OptionsButton>
+                </Button>
               </div>
             </OptionsRow>
           </OptionsSection>

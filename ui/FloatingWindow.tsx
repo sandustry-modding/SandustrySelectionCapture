@@ -1,3 +1,4 @@
+import { Button } from "@modkit/ui";
 import {
   useCallback,
   useEffect,
@@ -218,18 +219,11 @@ export function FloatingWindow({
         >
           <span className="text-xs uppercase tracking-wider text-gray-300">{title}</span>
           {subtitle ? <span className="text-[10px] text-gray-400">{subtitle}</span> : <span />}
-          <button
-            type="button"
-            className="text-white hover:text-[#ffe700] transition-colors leading-none px-1"
-            aria-label="Close"
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onClose();
-            }}
-          >
-            ✕
-          </button>
+          <span onPointerDown={(event) => event.stopPropagation()} aria-label="Close">
+            <Button small border={false} onClick={() => onClose()}>
+              ✕
+            </Button>
+          </span>
         </div>
 
         <div className="flex-1 min-h-0 p-3 overflow-y-auto">{children}</div>
