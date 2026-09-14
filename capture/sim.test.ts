@@ -40,6 +40,24 @@ test("waitTick resolves when already aborted", async () => {
   );
 });
 
+test("waitTick resolves on stop without aborting cancel", async () => {
+  const abort = new AbortController();
+  const stop = new AbortController();
+  let tickCb: (() => void) | undefined;
+  const pending = waitTick(
+    mockApi((cb) => {
+      tickCb = cb;
+    }),
+    abort.signal,
+    { stop: stop.signal },
+  );
+  stop.abort();
+  await pending;
+  assert.equal(abort.signal.aborted, false);
+  assert.equal(stop.signal.aborted, true);
+  tickCb?.();
+});
+
 test("throwIfAborted and isAbortError", () => {
   const abort = new AbortController();
   abort.abort();

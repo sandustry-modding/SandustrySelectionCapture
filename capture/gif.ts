@@ -33,6 +33,10 @@ export type RecordGifOptions = {
   /** Post-capture nearest-neighbor upscale. Default 2. */
   scale?: number;
   signal?: AbortSignal;
+  /** When aborted, stop capture and still encode if enough frames exist. */
+  stop?: AbortSignal;
+  /** Stop capture after this many accepted frames and still encode (tests). */
+  stopAfterFrames?: number;
   /** Called after capture, before the worker flush. */
   onEncodeStart?: () => void;
   /** Optional caption overlay composited on each frame after upscale. */
@@ -60,7 +64,14 @@ function clampMinInt(value: number, min: number): number {
 }
 
 function gifMagic(bytes: Uint8Array): string {
-  return String.fromCharCode(bytes[0] ?? 0, bytes[1] ?? 0, bytes[2] ?? 0, bytes[3] ?? 0, bytes[4] ?? 0, bytes[5] ?? 0);
+  return String.fromCharCode(
+    bytes[0] ?? 0,
+    bytes[1] ?? 0,
+    bytes[2] ?? 0,
+    bytes[3] ?? 0,
+    bytes[4] ?? 0,
+    bytes[5] ?? 0,
+  );
 }
 
 function outcome(result: RecordGifResult, encoded?: EncodedGif): RecordGifOutcome {
@@ -155,6 +166,9 @@ export async function recordSelectionGifOutcome(
   let session: Awaited<ReturnType<typeof openGifEncodeSession>> | null = null;
   let hitLimit = false;
   let acceptedFrames = 0;
+  const captureStopped = () =>
+    options.stop?.aborted === true ||
+    (options.stopAfterFrames !== undefined && acceptedFrames >= options.stopAfterFrames);
 
   try {
     setSimulationPaused(false);
@@ -162,6 +176,7 @@ export async function recordSelectionGifOutcome(
     if (advanced) beginOverlayRecording();
     try {
       for (let i = 0; i < framesWanted; i++) {
+        if (captureStopped()) break;
         if (overlay?.advanced) setOverlayRecordingFrame(i);
 
         const grab = await grabPaintedFrame(api, bounds, look, step);
@@ -172,9 +187,14 @@ export async function recordSelectionGifOutcome(
           return outcome("failed");
         }
 
-        const frame = await finishCaptureCanvas(grab.canvas, scale, overlayEnabled ? overlay : undefined, {
-          frameIndex: i,
-        });
+        const frame = await finishCaptureCanvas(
+          grab.canvas,
+          scale,
+          overlayEnabled ? overlay : undefined,
+          {
+            frameIndex: i,
+          },
+        );
         const rgba = canvasToRgba(frame);
         if (!rgba) return outcome("failed");
 
@@ -191,7 +211,9 @@ export async function recordSelectionGifOutcome(
 
         // Overlap tick wait with encode; absorb wait if encode throws or hits the size cap.
         const tickWait =
-          i < framesWanted - 1 ? waitTick(api, options.signal, { step }) : Promise.resolve();
+          i < framesWanted - 1
+            ? waitTick(api, options.signal, { step, stop: options.stop })
+            : Promise.resolve();
         try {
           const added = await session.addFrame(rgba, options.signal);
           if (!added.accepted) {
@@ -205,6 +227,7 @@ export async function recordSelectionGifOutcome(
           }
           await tickWait;
           throwIfAborted(options.signal);
+          if (captureStopped()) break;
         } catch (error) {
           await tickWait.catch(() => {});
           throw error;
@@ -214,7 +237,10 @@ export async function recordSelectionGifOutcome(
       if (advanced) endOverlayRecording();
     }
 
-    if (acceptedFrames < MIN_FRAMES && !hitLimit) return outcome("failed");
+    if (acceptedFrames < MIN_FRAMES && !hitLimit) {
+      session?.close();
+      return outcome(captureStopped() ? "cancelled" : "failed");
+    }
     if (!session) return outcome("failed");
 
     options.onEncodeStart?.();

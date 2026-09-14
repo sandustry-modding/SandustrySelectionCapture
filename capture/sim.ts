@@ -36,10 +36,11 @@ export function setSimulationPaused(paused: boolean): void {
 export function waitTick(
   api: SandkitApi,
   signal: AbortSignal | undefined,
-  options?: { step?: boolean },
+  options?: { step?: boolean; stop?: AbortSignal },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
+    const stop = options?.stop;
+    if (signal?.aborted || stop?.aborted) {
       resolve();
       return;
     }
@@ -54,6 +55,7 @@ export function waitTick(
     const cleanup = () => {
       clearTimeout(timeoutId);
       signal?.removeEventListener("abort", onAbort);
+      stop?.removeEventListener("abort", onAbort);
     };
 
     const onAbort = () => {
@@ -62,10 +64,11 @@ export function waitTick(
       resolve();
     };
     signal?.addEventListener("abort", onAbort, { once: true });
+    stop?.addEventListener("abort", onAbort, { once: true });
 
     if (step) setSimulationPaused(false);
     api.schedule.nextTick(() => {
-      if (signal?.aborted) {
+      if (signal?.aborted || stop?.aborted) {
         cleanup();
         if (step) setSimulationPaused(true);
         resolve();
@@ -83,7 +86,5 @@ export function throwIfAborted(signal: AbortSignal | undefined): void {
 }
 
 export function isAbortError(error: unknown): boolean {
-  return (
-    (error instanceof DOMException || error instanceof Error) && error.name === "AbortError"
-  );
+  return (error instanceof DOMException || error instanceof Error) && error.name === "AbortError";
 }

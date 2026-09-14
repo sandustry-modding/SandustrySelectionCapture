@@ -51,13 +51,17 @@ const BINDINGS = {
   recordGif: `${modinfo.id}.recordGif`,
 } as const;
 
+type RecordPhase = "idle" | "countdown" | "recording" | "encoding";
+
 type OverlayLive = {
   bindingsInstalled: boolean;
   open: boolean;
+  phase: RecordPhase;
   toggle: () => void;
   screenshot: () => void;
   recordGif: () => void;
   abortRecord: AbortController | null;
+  stopRecord: AbortController | null;
 };
 
 /**
@@ -70,10 +74,12 @@ const live: OverlayLive = (() => {
   return (root[key] ??= {
     bindingsInstalled: false,
     open: false,
+    phase: "idle" as RecordPhase,
     toggle: () => {},
     screenshot: () => {},
     recordGif: () => {},
     abortRecord: null,
+    stopRecord: null,
   });
 })();
 
@@ -96,13 +102,24 @@ function formatEdgeAlign(value: number, minLabel: string, maxLabel: string): str
   return `${value}%`;
 }
 
-function isToggleKey(event: KeyboardEvent): boolean {
-  if (event.key === "F7" || event.code === "F7") return true;
-  const bound = sandkit.api.input.getBoundKeys(BINDINGS.togglePanel);
+function matchesBinding(event: KeyboardEvent, bindingId: string): boolean {
+  const bound = sandkit.api.input.getBoundKeys(bindingId);
   return bound.some((key) => {
     const k = key.toLowerCase();
     return event.key.toLowerCase() === k || event.code.toLowerCase() === k;
   });
+}
+
+function isToggleKey(event: KeyboardEvent): boolean {
+  if (event.key === "F7" || event.code === "F7") return true;
+  return matchesBinding(event, BINDINGS.togglePanel);
+}
+
+function isTextEntryTarget(event: KeyboardEvent): boolean {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
 }
 
 function installBindings() {
@@ -125,11 +142,12 @@ function installBindings() {
     category,
     handlers: { down: () => live.screenshot() },
   });
+  // Same capture-phase keydown as F7 — binding down does not always fire (F-keys, overlay).
   api.input.registerBinding(BINDINGS.recordGif, [], {
     displayName: "Record GIF",
     displayNameKey: "Record GIF",
     category,
-    handlers: { down: () => void live.recordGif() },
+    handlers: { down: () => {} },
   });
 }
 
@@ -147,10 +165,16 @@ export function Overlay() {
     lockedGifBounds,
     overlay,
   } = settings;
-  const [phase, setPhase] = useState<"idle" | "countdown" | "recording" | "encoding">("idle");
+  const [phase, setPhase] = useState<RecordPhase>(() => live.phase);
   const [countdownLeft, setCountdownLeft] = useState<number | null>(null);
   const [frozenBounds, setFrozenBounds] = useState<CellBounds | null>(null);
+  const [stopRequested, setStopRequested] = useState(false);
   const busy = phase !== "idle";
+
+  function goPhase(next: RecordPhase) {
+    live.phase = next;
+    setPhase(next);
+  }
 
   function patchSettings(patch: Partial<CaptureSettings>) {
     setSettings((current) => ({ ...current, ...patch }));
@@ -205,21 +229,30 @@ export function Overlay() {
 
   live.recordGif = () => {
     if (live.abortRecord) {
+      if (live.phase === "recording" && live.stopRecord && !live.stopRecord.signal.aborted) {
+        live.stopRecord.abort();
+        setStopRequested(true);
+        return;
+      }
       live.abortRecord.abort();
       return;
     }
     const abort = new AbortController();
+    const stop = new AbortController();
     live.abortRecord = abort;
+    live.stopRecord = stop;
+    setStopRequested(false);
     const api = sandkit.api;
     const rawBounds = resolveCaptureBounds(api, lockedGifBounds, { blockPadding });
     if (!rawBounds) {
       live.abortRecord = null;
+      live.stopRecord = null;
       api.ui.toast("Lock capture area or press C, drag, then Record", {});
       return;
     }
     const gifScale = modGifScale(api);
     setFrozenBounds(rawBounds);
-    setPhase("countdown");
+    goPhase("countdown");
     void (async () => {
       try {
         const countdown = await waitCountdownSeconds(
@@ -233,7 +266,7 @@ export function Overlay() {
           return;
         }
 
-        setPhase("recording");
+        goPhase("recording");
         const result = await recordSelectionGif(api, {
           frames,
           greenscreen,
@@ -243,10 +276,11 @@ export function Overlay() {
           bounds: rawBounds,
           scale: gifScale,
           signal: abort.signal,
+          stop: stop.signal,
           overlay,
           stepSimulation,
           optimizeGif,
-          onEncodeStart: () => setPhase("encoding"),
+          onEncodeStart: () => goPhase("encoding"),
         });
         const sizeLabel = gifSizeLimitLabel(gifSizeLimit);
         switch (result) {
@@ -277,9 +311,11 @@ export function Overlay() {
         api.ui.toast("GIF record failed", {});
       } finally {
         if (live.abortRecord === abort) live.abortRecord = null;
+        if (live.stopRecord === stop) live.stopRecord = null;
         setCountdownLeft(null);
         setFrozenBounds(null);
-        setPhase("idle");
+        setStopRequested(false);
+        goPhase("idle");
       }
     })();
   };
@@ -289,10 +325,17 @@ export function Overlay() {
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
-      if (!isToggleKey(event)) return;
+      if (isToggleKey(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+        live.toggle();
+        return;
+      }
+      if (isTextEntryTarget(event)) return;
+      if (!matchesBinding(event, BINDINGS.recordGif)) return;
       event.preventDefault();
       event.stopPropagation();
-      live.toggle();
+      live.recordGif();
     }
 
     window.addEventListener("keydown", onKeyDown, true);
@@ -537,10 +580,7 @@ export function Overlay() {
                 <Button disabled={busy} onClick={() => lockGifArea()}>
                   Lock
                 </Button>
-                <Button
-                  disabled={busy || !lockedGifBounds}
-                  onClick={() => clearLockedGifArea()}
-                >
+                <Button disabled={busy || !lockedGifBounds} onClick={() => clearLockedGifArea()}>
                   Clear
                 </Button>
               </div>
@@ -561,9 +601,11 @@ export function Overlay() {
                 <Button onClick={() => live.recordGif()}>
                   {phase === "countdown" && countdownLeft !== null
                     ? String(countdownLeft)
-                    : busy
-                      ? "Cancel"
-                      : "Record"}
+                    : phase === "recording" && !stopRequested
+                      ? "Stop"
+                      : busy
+                        ? "Cancel"
+                        : "Start"}
                 </Button>
               </div>
             </OptionsRow>

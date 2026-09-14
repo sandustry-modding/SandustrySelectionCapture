@@ -15,9 +15,12 @@ Share a machine, a line, or a whole scene without a blurry screenshot. **Screens
 
 - **F7** — open or close the panel (title-bar ✕ also closes)
 - **Screenshot** — copy a PNG; paste with **Ctrl+V** (or download — see **Options → Mods**)
-- **Record GIF** — record an animated GIF while the sim runs; the `.gif` downloads
+- **Record GIF** — record an animated GIF while the sim runs; the `.gif` downloads.
+  The bound key is the same as the button: **Start**, then **Stop** (saves), then **Cancel**.
 
-Set keys for **Screenshot** and **Record GIF** in Options → Controls. The panel buttons show those keys when bound.
+Set keys for **Screenshot** and **Record GIF** in Options → Controls.
+The panel buttons show those keys when bound.
+The Record GIF key follows **Start** → **Stop** → **Cancel**.
 
 ## Panel
 
@@ -32,7 +35,10 @@ Set keys for **Screenshot** and **Record GIF** in Options → Controls. The pane
 
 Panel settings are saved between sessions.
 
-**GIF countdown** — 0–10 seconds before Record GIF starts (default 3). Set under **Options → Mods**. **0** starts at once. Cancel works during the count.
+**GIF countdown** — 0–10 seconds before Record GIF starts (default 3).
+Set under **Options → Mods**.
+**0** starts at once.
+Cancel works during the count.
 
 **Download PNG** — under **Options → Mods**, save a PNG file instead of copying to the clipboard. The panel button switches between **Copy PNG** and **Download PNG**.
 
@@ -46,7 +52,21 @@ While the panel is open, an **orange** outline shows the live **C** selection an
 
 **GIF size limit** keeps the saved file at or under **1 MB**, **2 MB**, or **5 MB** (default **5 MB**). **No limit** (last in the list) keeps every frame. Without **Optimize GIF**, each prefix encodes while you record and capture **stops** when the next frame would pass the cap. With **Optimize GIF** on, capture uses your **Frames** count; the cap applies to the re-encoded file and extra frames drop from the end. Use **1 MB** for Steam Workshop thumbnails. If even two frames are over the cap, crop a smaller box.
 
-**Screenshot** and **Record GIF** both use a locked capture area when one is set; otherwise they use the live **C** selection. **Record GIF** waits for the **Countdown**, then captures one frame per sim tick. With **Step sim** off, the sim keeps running. With **Step sim** on, the sim pauses on each painted frame. Use **Capture area** to pin the crop from your current **C** selection — you can clear select and keep building while the panel stays open and the orange outline shows. Changing **Block padding** while locked updates that outline and the next capture crop. Without **Optimize GIF**, each frame encodes while you record so capture can stop at the size cap. With **Optimize GIF** on, re-encode runs after capture and the size cap applies to that file. Set **PNG upscale** / **GIF upscale** under **Options → Mods** (default 2×). Overlay text is drawn after upscale. The file downloads. The row shows the countdown, then **Recording…**. The button is **Cancel** in all of those cases.
+**Screenshot** and **Record GIF** both use a locked capture area when one is set; otherwise they use the live **C** selection.
+**Record GIF** waits for the **Countdown**, then captures one frame per sim tick.
+With **Step sim** off, the sim keeps running.
+With **Step sim** on, the sim pauses on each painted frame.
+Use **Capture area** to pin the crop from your current **C** selection — you can clear select and keep building while the panel stays open and the orange outline shows.
+Changing **Block padding** while locked updates that outline and the next capture crop.
+Without **Optimize GIF**, each frame encodes while you record so capture can stop at the size cap.
+With **Optimize GIF** on, re-encode runs after capture and the size cap applies to that file.
+Set **PNG upscale** / **GIF upscale** under **Options → Mods** (default 2×).
+Overlay text is drawn after upscale.
+The file downloads.
+The row shows the countdown, then **Recording…**, then **Encoding…**.
+The button and the Record GIF key are **Start**, then **Stop** (saves the frames you have), then **Cancel** (stops encode with no file).
+A click or key press during the countdown still cancels.
+**Stop** needs at least 2 frames.
 
 **Record GIF** exits **C** select mode when recording starts (clears the selection and restores the normal cursor) so you can keep building. The crop stays the box you selected. Select mode is not restored when the GIF finishes.
 

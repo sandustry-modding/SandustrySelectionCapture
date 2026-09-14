@@ -20,6 +20,7 @@ export type RecordGifHookArgs = {
   gifSizeLimit?: "1mb" | "2mb" | "5mb" | "none";
   greenscreen?: boolean;
   abortImmediately?: boolean;
+  stopAfterFrames?: number;
   stepSimulation?: boolean;
   optimizeGif?: boolean;
 };
@@ -38,9 +39,7 @@ function hookLook(greenscreen: boolean | undefined) {
   return { greenscreen: greenscreen === true, showMouse: false };
 }
 
-async function watchRecordGif(
-  run: () => Promise<RecordGifOutcome>,
-): Promise<RecordGifHookOutcome> {
+async function watchRecordGif(run: () => Promise<RecordGifOutcome>): Promise<RecordGifHookOutcome> {
   let pausedHits = 0;
   let ticks = 0;
   let watch = true;
@@ -67,6 +66,7 @@ export function installSelectionCaptureTestHook(): void {
     capturePng(args) {
       return captureSelectionPngOutcome(sandkit.api, hookLook(args.greenscreen), {
         lockedBounds: args.bounds,
+        blockPadding: 0,
         scale: args.scale ?? 1,
         emit: "none",
         overlay: { ...DEFAULT_CAPTURE_OVERLAY },
@@ -84,6 +84,7 @@ export function installSelectionCaptureTestHook(): void {
           bounds: args.bounds ?? undefined,
           scale: args.scale ?? 1,
           signal: abort.signal,
+          stopAfterFrames: args.stopAfterFrames,
           overlay: { ...DEFAULT_CAPTURE_OVERLAY },
           stepSimulation: args.stepSimulation === true,
           optimizeGif: args.optimizeGif === true,

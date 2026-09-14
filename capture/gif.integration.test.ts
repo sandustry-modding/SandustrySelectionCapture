@@ -20,15 +20,13 @@ type CaptureOutcome = {
 };
 
 type TestHook = {
-  capturePng: (args: {
-    bounds: CellBounds;
-    scale?: number;
-  }) => Promise<CaptureOutcome>;
+  capturePng: (args: { bounds: CellBounds; scale?: number }) => Promise<CaptureOutcome>;
   recordGif: (args: {
     bounds: CellBounds | null;
     frames?: number;
     scale?: number;
     abortImmediately?: boolean;
+    stopAfterFrames?: number;
   }) => Promise<CaptureOutcome>;
 };
 
@@ -134,6 +132,32 @@ describe("selection-capture grab", { concurrency: false }, () => {
       crop!.bounds,
     );
     assert.equal(gif.result, "cancelled");
+  });
+
+  test("GIF stop after two frames still encodes", async (t) => {
+    const ids = await game.orderedModIds();
+    if (!ids.includes(MOD_ID) || !(await hook())) {
+      t.skip(`${MOD_ID} is not loaded`);
+      return;
+    }
+    const crop = await playerCrop();
+    assert.ok(crop);
+    const gif = await game.evaluate(
+      async (key: string, bounds: CellBounds) => {
+        const live = (globalThis as unknown as Record<string, TestHook>)[key];
+        return live.recordGif({
+          bounds,
+          frames: 8,
+          scale: 1,
+          stopAfterFrames: 2,
+        });
+      },
+      HOOK_KEY,
+      crop!.bounds,
+    );
+    assert.equal(gif.result, "ok");
+    assert.equal(gif.magic, "GIF89a");
+    assert.equal(gif.frameCount, 2);
   });
 
   test("GIF without bounds returns no-selection", async (t) => {

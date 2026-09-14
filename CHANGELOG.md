@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 0.9.0
+
+- Changed: the Record GIF button and the Record GIF key are **Start**, then **Stop** (saves the frames you have), then **Cancel** (discards encode).
 - Fixed: Cancel during Record GIF no longer logs an uncaught `AbortError` from the tick wait.
 - Fixed: changing **Block padding** while a capture area is locked updates the orange outline and crop preview live (and the next PNG/GIF crop).
 - Fixed: simple overlay caption no longer flickers in the live preview while Record GIF grabs frames.

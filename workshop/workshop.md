@@ -12,7 +12,9 @@ Share a machine, a line, or a whole scene without a blurry screenshot. **Screens
 4. **Screenshot** — copy a PNG (paste with Ctrl+V) or download a file (see Options → Mods).
 5. **Record GIF** — downloads an animated GIF while the sim keeps running.
 
-Set keys for Screenshot and Record GIF in Options → Controls. The panel shows those keys when bound.
+Set keys for Screenshot and Record GIF in Options → Controls.
+The panel shows those keys when bound.
+The Record GIF key follows Start, then Stop (saves), then Cancel.
 
 ## Features
 
@@ -29,7 +31,8 @@ Set keys for Screenshot and Record GIF in Options → Controls. The panel shows 
 - **Overlay** — simple caption (text, font size, align) or advanced HTML/CSS with live preview in the capture box
 - Orange crop preview for live C select, locked capture area, and countdown; red while recording; blue while encoding
 - Panel settings saved between sessions
-- Cancel during countdown, GIF capture, or encode
+- Record GIF button: **Start**, then **Stop** (saves), then **Cancel** (discards encode)
+- Cancel during countdown or encode
 - HUD and marquee handles stay out of the image
 - Record GIF exits C select mode when capture starts so you can keep playing during the capture
 
