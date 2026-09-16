@@ -28,5 +28,3 @@ safe(() => {
   registerUi();
   installSelectionCaptureTestHook();
 });
-
-console.log("loaded");
