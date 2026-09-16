@@ -95,7 +95,7 @@ test("GIF_SIZE_LIMIT_OPTIONS lists No limit last", () => {
     GIF_SIZE_LIMIT_OPTIONS.map((option) => option.value),
     ["1mb", "2mb", "5mb", "none"],
   );
-  assert.equal(GIF_SIZE_LIMIT_OPTIONS.at(-1)?.label, "No limit");
+  assert.equal(GIF_SIZE_LIMIT_OPTIONS[GIF_SIZE_LIMIT_OPTIONS.length - 1]?.label, "No limit");
 });
 
 test("gifSizeLimitBytes and gifSizeLimitLabel cover each option", () => {

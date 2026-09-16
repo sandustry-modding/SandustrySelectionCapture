@@ -22,7 +22,7 @@ let stream: GifStream | null = null;
 
 function reply(data: unknown, transfer?: Transferable[]): void {
   if (transfer && transfer.length > 0) {
-    self.postMessage(data, transfer);
+    self.postMessage(data, { transfer });
     return;
   }
   self.postMessage(data);
