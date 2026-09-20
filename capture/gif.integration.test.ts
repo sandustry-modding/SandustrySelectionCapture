@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
-import { describe, test } from "node:test";
+import { before, describe, test } from "node:test";
 import { setupGame } from "@modkit/test";
 
 const MOD_ID = "irishbruse.selection-capture";
 const HOOK_KEY = `${MOD_ID}:test`;
+const CAPTURE_SLOT = `${MOD_ID}:capture-slot`;
 const game = await setupGame();
+
+before(async () => {
+  await game.clock.install();
+  await game.seed();
+});
 
 type CellBounds = { minX: number; minY: number; maxX: number; maxY: number };
 
@@ -63,6 +69,77 @@ async function hook(): Promise<boolean> {
   }, HOOK_KEY);
 }
 
+type CaptureSlot = { done: boolean; value?: CaptureOutcome };
+
+type GifStart = {
+  bounds: CellBounds | null;
+  frames?: number;
+  scale?: number;
+  abortImmediately?: boolean;
+  stopAfterFrames?: number;
+};
+
+function readCaptureSlot(slotKey: string): CaptureSlot {
+  return (
+    (globalThis as typeof globalThis & Record<string, CaptureSlot | undefined>)[slotKey] ?? {
+      done: false,
+    }
+  );
+}
+
+async function waitForCapture(): Promise<CaptureOutcome> {
+  const slot = await game.waitFor(readCaptureSlot, (value) => value.done, {
+    args: [CAPTURE_SLOT],
+    ticksPerPoll: 1,
+    timeoutMs: 20000,
+    message: "selection capture did not finish",
+  });
+  assert.ok(slot.value, "capture finished without a result");
+  return slot.value;
+}
+
+async function startPng(bounds: CellBounds): Promise<void> {
+  await game.evaluate(
+    (key: string, slotKey: string, crop: CellBounds) => {
+      const live = (globalThis as unknown as Record<string, TestHook>)[key];
+      const slots = globalThis as typeof globalThis & Record<string, CaptureSlot>;
+      slots[slotKey] = { done: false };
+      live.capturePng({ bounds: crop, scale: 1 }).then(
+        (value) => {
+          slots[slotKey] = { done: true, value };
+        },
+        () => {
+          slots[slotKey] = { done: true, value: { result: "failed" } };
+        },
+      );
+    },
+    HOOK_KEY,
+    CAPTURE_SLOT,
+    bounds,
+  );
+}
+
+async function startGif(args: GifStart): Promise<void> {
+  await game.evaluate(
+    (key: string, slotKey: string, gifArgs: GifStart) => {
+      const live = (globalThis as unknown as Record<string, TestHook>)[key];
+      const slots = globalThis as typeof globalThis & Record<string, CaptureSlot>;
+      slots[slotKey] = { done: false };
+      live.recordGif(gifArgs).then(
+        (value) => {
+          slots[slotKey] = { done: true, value };
+        },
+        () => {
+          slots[slotKey] = { done: true, value: { result: "failed" } };
+        },
+      );
+    },
+    HOOK_KEY,
+    CAPTURE_SLOT,
+    args,
+  );
+}
+
 describe("selection-capture grab", { concurrency: false }, () => {
   test("PNG of a small player crop is a PNG at crop size", async (t) => {
     const ids = await game.orderedModIds();
@@ -72,14 +149,8 @@ describe("selection-capture grab", { concurrency: false }, () => {
     }
     const crop = await playerCrop();
     assert.ok(crop);
-    const png = await game.evaluate(
-      async (key: string, bounds: CellBounds) => {
-        const live = (globalThis as unknown as Record<string, TestHook>)[key];
-        return live.capturePng({ bounds, scale: 1 });
-      },
-      HOOK_KEY,
-      crop!.bounds,
-    );
+    await startPng(crop.bounds);
+    const png = await waitForCapture();
     assert.equal(png.result, "ok");
     assert.equal(png.magic?.charCodeAt(0), 0x89);
     assert.equal(png.magic?.slice(1), "PNG");
@@ -95,14 +166,8 @@ describe("selection-capture grab", { concurrency: false }, () => {
     }
     const crop = await playerCrop();
     assert.ok(crop);
-    const gif = await game.evaluate(
-      async (key: string, bounds: CellBounds) => {
-        const live = (globalThis as unknown as Record<string, TestHook>)[key];
-        return live.recordGif({ bounds, frames: 2, scale: 1 });
-      },
-      HOOK_KEY,
-      crop!.bounds,
-    );
+    await startGif({ bounds: crop.bounds, frames: 2, scale: 1 });
+    const gif = await waitForCapture();
     assert.equal(gif.result, "ok");
     assert.equal(gif.magic, "GIF89a");
     assert.equal(gif.width, crop!.pixelWidth);
@@ -119,18 +184,12 @@ describe("selection-capture grab", { concurrency: false }, () => {
     }
     const crop = await playerCrop();
     assert.ok(crop);
-    const gif = await game.evaluate(
-      async (key: string, bounds: CellBounds) => {
-        const live = (globalThis as unknown as Record<string, TestHook>)[key];
-        return live.recordGif({
-          bounds,
-          frames: 4,
-          abortImmediately: true,
-        });
-      },
-      HOOK_KEY,
-      crop!.bounds,
-    );
+    await startGif({
+      bounds: crop.bounds,
+      frames: 4,
+      abortImmediately: true,
+    });
+    const gif = await waitForCapture();
     assert.equal(gif.result, "cancelled");
   });
 
@@ -142,19 +201,13 @@ describe("selection-capture grab", { concurrency: false }, () => {
     }
     const crop = await playerCrop();
     assert.ok(crop);
-    const gif = await game.evaluate(
-      async (key: string, bounds: CellBounds) => {
-        const live = (globalThis as unknown as Record<string, TestHook>)[key];
-        return live.recordGif({
-          bounds,
-          frames: 8,
-          scale: 1,
-          stopAfterFrames: 2,
-        });
-      },
-      HOOK_KEY,
-      crop!.bounds,
-    );
+    await startGif({
+      bounds: crop.bounds,
+      frames: 8,
+      scale: 1,
+      stopAfterFrames: 2,
+    });
+    const gif = await waitForCapture();
     assert.equal(gif.result, "ok");
     assert.equal(gif.magic, "GIF89a");
     assert.equal(gif.frameCount, 2);
@@ -179,23 +232,15 @@ describe("selection-capture grab", { concurrency: false }, () => {
       t.skip(`${MOD_ID} is not loaded`);
       return;
     }
-    await game.resumeSimulation();
     const crop = await playerCrop();
     assert.ok(crop);
     const frames = 8;
-    const gif = await game.evaluate(
-      async (key: string, bounds: CellBounds, frameCount: number) => {
-        const live = (globalThis as unknown as Record<string, TestHook>)[key];
-        return live.recordGif({
-          bounds,
-          frames: frameCount,
-          scale: 1,
-        });
-      },
-      HOOK_KEY,
-      crop!.bounds,
+    await startGif({
+      bounds: crop.bounds,
       frames,
-    );
+      scale: 1,
+    });
+    const gif = await waitForCapture();
     assert.equal(gif.result, "ok");
     assert.equal(gif.frameCount, frames);
     assert.equal(gif.pausedHits, 0);
